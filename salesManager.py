@@ -1,0 +1,842 @@
+import tkinter as tk
+from tkinter.scrolledtext import ScrolledText
+import customtkinter as ctk
+import pandas as pd
+import numpy as np
+import datetime as dt
+import os
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from help import testoHelp
+
+class SalesManager:
+
+    def __init__(self, parent, root):
+        self.parent = parent
+        self.root = root
+        self.root.title("Sales Order Form")
+
+        self.path_dataset = "datiCassa.csv"
+        self.path_impo = "impostazioniCassa.csv"
+        self.path_sconti = "scontiCassa.csv"
+
+        self.impostazioniGet()
+        
+        self.basicHeaders = np.array(['cliente', 'status', 'scontoSpeciale', 'sconto', 'prezzo', 'giorno', 'ts', 'NOTE'])
+        self.opts = ['TODO', 'DONE', 'STBY']
+        self.cats = ['P', 'C', 'B']
+
+        #self.impostazioniGet()
+        self.importaDati()
+
+        # create ui for cassa
+        self.setupCassaUI()
+        self.fill_cassa()
+        self.aggiornasconti()
+        self.setupPlot()
+        self.setupOrdini()
+        self.setupImpoUI()
+        self.setupPanelOpt()
+        self.setupHelp()
+        self.setupMenu()
+        self.IDCLIENT()
+        #self.hideshowcassa(True)
+        self.show_frame('cassa')
+        self.prezzoFattura = 0
+        
+    def impostazioniGet(self):
+        if (os.path.exists(self.path_impo)):
+            self.impo = pd.read_csv(self.path_impo, sep=';', decimal=',')
+        else:
+            self.gen_example_impo()
+
+    def gen_example_impo(self):
+            impo = {
+                'prodotto' : ['salamella', 'speck', 'vegetariano', 'patatine', 'an cipolla', 'piadanutella', 'birra','acqua', 'spritz'],
+                'prezzo':   [4,    4,   4,   3,   3,   3,   3,  1.2,  3],
+                'categoria':['P', 'P', 'P', 'C', 'C', 'C', 'B', 'B', 'B']
+            }
+            impo = pd.DataFrame(impo)
+            impo.to_csv(self.path_impo, sep=';', decimal=',', index=False)
+            self.impo=impo
+
+
+    def importaDati(self):
+        if (os.path.exists(self.path_dataset)):
+            self.dataset = pd.read_csv(self.path_dataset, sep=';', decimal=',')
+            print('dati trovati')
+        else:
+            print('dati non trovati, dati generati')
+            self.creaDati()
+
+    def creaDati(self):
+        df = pd.DataFrame(columns = np.append(self.basicHeaders, np.array(self.impo['prodotto'])).tolist() )
+        df.loc[0] = [0] * df.shape[1]
+        df.to_csv(self.path_dataset, sep=';', index=False)
+        self.dataset = pd.read_csv(self.path_dataset, sep=';', decimal=',')
+
+    def aggiornaDati(self, newrow):
+        df = self.dataset
+        df.loc[len(df)] = newrow.tolist()
+        df.to_csv(self.path_dataset, sep=';', index=False, decimal=',')
+        self.parent.update_sv()      #ricarica i sales viewer
+
+    def aggiornaDati0(self):
+        df = self.dataset
+        df.to_csv(self.path_dataset, sep=';', index=False, decimal=',')
+
+    def backupDati(self):
+        df = self.dataset
+        ts = str(dt.datetime.now())
+        df.to_csv(("backup_cassa_"+ts).replace('.', '_').replace(':','_')+'.csv', sep=';', index=False, decimal=',')
+
+    def setupMenu(self):
+        self.menubar = tk.Menu(self.root)
+        self.root.config(menu=self.menubar)
+        self.menubar.add_command(label="CASSA", command = lambda: self.show_frame('cassa'))#hideshowcassa(True))
+        self.menubar.add_command(label="SALES_REPORT", command = self.plotta)
+        self.menubar.add_command(label="ORDINI", command = lambda: self.show_frame('order'))#hideshoworder(True))
+        self.menubar.add_command(label="TOOLS", command = lambda: self.show_frame('panelopt'))  #hideshowpanelopt(True))
+        self.menubar.add_command(label="PRODS&PRICES", command = lambda: self.show_frame('impo')) #hideshowimpo(True))
+        self.menubar.add_command(label="HELP", command = lambda: self.show_frame('help'))#hideshowhelp(True))
+
+    def show_frame(self, fr_name):
+        frames =      [self.cassa_frame, self.order_frame, self.impo_frame, self.help_frame, self.plot_frame, self.opt_frame]
+        fr_names = np.array(['cassa',         'order',          'impo',         'help',           'plot',     'panelopt'])
+        id = np.where(fr_names == fr_name)[0] #np.where restituisce l'array degli indici dove è vero, perciò va selezionato [0]
+        for i in range(len(frames)):
+            if (i != id):
+                frames[i].pack_forget()
+            else:
+                frames[i].pack(expand=True, padx=5, pady=5, fill=tk.BOTH)
+
+            if (fr_names[i] == 'order'):
+                self.fill_scrollbar()
+
+
+
+############################################################################################################ CASSA
+
+    def setupCassaUI(self):
+        # Create a main frame to center everything
+        self.cassa_frame = tk.Frame(self.root)
+        self.cassa_frame.pack(expand=True, pady=5, padx=5)  
+        #NB: I frame vanno posizionati solo DOPO l'assegnazione
+
+    def aggiornasconti(self):
+        if (os.path.exists(self.path_sconti)):
+            sconti = pd.read_csv(self.path_sconti, sep=';', decimal=',')
+            self.scontoPC.delete(0, "end")
+            self.scontoPC.insert(0, sconti['scontoPC'][0])
+            self.scontoPB.delete(0, "end")
+            self.scontoPB.insert(0, sconti['scontoPB'][0])
+            self.scontoCB.delete(0, "end")
+            self.scontoCB.insert(0, sconti['scontoCB'][0])
+
+    def fill_cassa(self):
+        self.cassa_frame.destroy()
+        # Create a main frame to center everything
+        self.cassa_frame = tk.Frame(self.root)
+        self.cassa_frame.pack(expand=True, pady=5, padx=5)  
+        #NB: I frame vanno posizionati solo DOPO l'assegnazione        
+        catTag = ['P', 'C', 'B']
+        catName = ['Panini', 'Contorni', 'Bibite']
+
+        self.sbListQ = []
+        self.sbListS = []
+        
+        for k in range(self.impo.shape[1]):
+            #print(k)
+
+            cat_frame = tk.Frame(self.cassa_frame, bd=2, relief="groove", padx=5, pady=10)
+            cat_frame.grid(row=0, column=k, padx=0, pady=0)    
+            labelFrame = tk.Label(cat_frame, text=catName[k], font=("Arial", 14, "bold"))
+            labelFrame.grid(row=0, column=0)
+            formFrame = tk.Frame(cat_frame)
+            formFrame.grid(row=1, column=0, pady=0)
+
+            prod_df = self.impo[self.impo['categoria'] == catTag[k]]
+
+            tk.Label(formFrame, text='quantità', font = ("Arial", 10)).grid(row=0, column=2)
+            tk.Label(formFrame, text='sconto', font = ("Arial", 10)).grid(row=0, column=4)
+
+            for p in range(prod_df.shape[0]):
+                prodName = prod_df.iloc[p]['prodotto']
+                prodPrice = prod_df.iloc[p]['prezzo']
+                p = p+1
+                # print(type(prodPrice))
+                # prodPrice = str(prodPrice)
+                # print(type(prodPrice))
+
+                tk.Label(formFrame, 
+                        text= f"{prodName} - (€  {prodPrice:.2f})", 
+                        font=("Arial", 12)).grid(row=p, column=0)
+                #NB: solo gli oggetti possono essere posizionati senza essere assegnati
+                #in generale questo vale per tutti quelli che non vengono chiamati da altri oggetti o funzioni
+        
+                #sbinbox quantità
+                spinbox = tk.Spinbox(formFrame, from_=0, to=99, increment=1, width=2, 
+                relief="sunken", repeatdelay=500, repeatinterval=100,
+                font=("Arial", 12), bg="aliceblue", fg="blue", command=self.on_spinbox_change)
+                spinbox.grid(row=p, column=2)   #se usi un oggetto in una funzione devi assegnarlo prima di posizionarlo
+                self.sbListQ.append(spinbox)
+
+                #spinbox sconti fissi
+                spinSconto = tk.Spinbox(formFrame, from_=0, to=900, increment=0.01, width=5, 
+                relief="sunken", repeatdelay=500, repeatinterval=100,
+                font=("Arial", 12), bg="aliceblue", fg="green", command=self.on_spinbox_change)
+                spinSconto.grid(row=p, column=4)   #se usi un oggetto in una funzione devi assegnarlo prima di posizionarlo
+                self.sbListS.append(spinSconto)
+
+                ctk.CTkButton(formFrame, text='+', fg_color = 'lightgreen', 	
+                        text_color="black",hover_color="orange", corner_radius=1000, font=("Arial", 20), width = 50, height=30,
+                        command = lambda sb=spinbox: self.updt_spin(sb, 1)
+                        ).grid(row=p, column=1, padx=10, pady=10)
+                ctk.CTkButton(formFrame, text='-', fg_color = 'lightblue', 	
+                        text_color="black", hover_color="orange", corner_radius=1000, font=("Arial", 20), width = 50, height=30,
+                        command = lambda sb=spinbox: self.updt_spin(sb, -1)
+                        ).grid(row=p, column=3, padx=10, pady=10)
+
+
+
+        ##AREE UI per fattura, note e resto        
+        conti_frame = tk.Frame(self.cassa_frame, bd=2, relief="groove")
+        conti_frame.grid(row=1, column=1)
+        note_frame = tk.Frame(self.cassa_frame)
+        note_frame.grid(row=1, column=2)
+        resto_frame =tk.Frame(self.cassa_frame)
+        resto_frame.grid(row=1, column=0)
+
+        ##RESTO UI
+        tk.Label(resto_frame, text='CONSEGNA', font=("Arial", 14)).grid(row=1, column=0)
+        tk.Label(resto_frame, text='RESTO', font=("Arial", 14)).grid(row=2, column=0)
+        self.valore_resto = tk.DoubleVar()
+        self.valore_resto.set('0')
+        tk.Label(resto_frame, textvariable=self.valore_resto, font=("Arial", 14)).grid(row=2, column=1)
+        self.valore_consegna = tk.Spinbox(resto_frame, text='20', increment=0.01, from_=0, to=99, width=5, 
+        command=self.calcola_resto, font=("Arial", 12))
+        self.valore_consegna.grid(row=1, column=1)
+        tk.Button(resto_frame, text='calcola resto', command=self.calcola_resto, font=("Arial", 14)).grid(row=3, column=1)
+
+
+        ##SCONTO COPPIE DI CATEGORIE UI
+
+        def salvasconti():
+            sconti = pd.DataFrame(columns=['scontoPC', 'scontoPB', 'scontoCB'])
+            sconti.loc[0] = [self.scontoPC.get(), self.scontoPB.get(), self.scontoCB.get()]
+            sconti.to_csv(self.path_sconti, sep=';', index=False, decimal=',')
+
+
+        tk.Label(resto_frame, text='', font = ("Arial",10)).grid(row=4, column=0)
+        tk.Label(resto_frame, text="sconto P+C", font = ("Arial",10)).grid(row=5, column=0)
+        tk.Label(resto_frame, text="sconto P+B", font = ("Arial",10)).grid(row=6, column=0)
+        tk.Label(resto_frame, text="sconto C+B", font = ("Arial",10)).grid(row=7, column=0)
+        self.scontoPC = tk.Spinbox(resto_frame, increment=0.01, from_=0, to=99, width=5, command=self.on_spinbox_change)
+        self.scontoPC.grid(row=5, column=1)
+        self.scontoPB = tk.Spinbox(resto_frame, increment=0.01, from_=0, to=99, width=5, command=self.on_spinbox_change)
+        self.scontoPB.grid(row=6, column=1)
+        self.scontoCB = tk.Spinbox(resto_frame, increment=0.01, from_=0, to=99, width=5, command=self.on_spinbox_change)
+        self.scontoCB.grid(row=7, column=1)
+        self.scontoPCT = tk.StringVar(resto_frame, "0")
+        tk.Label(resto_frame, textvariable= self.scontoPCT, font = ("Arial",10)).grid(row=5, column=2)
+        self.scontoPBT = tk.StringVar(resto_frame, "0")
+        tk.Label(resto_frame, textvariable= self.scontoPBT, font = ("Arial",10)).grid(row=6, column=2)
+        self.scontoCBT = tk.StringVar(resto_frame, "0")
+        tk.Label(resto_frame, textvariable= self.scontoCBT, font = ("Arial",10)).grid(row=7, column=2)
+
+        tk.Button(resto_frame, text='salva sconti', command=salvasconti,
+                 font=("Arial", 14)).grid(row=8, column=1)
+
+
+        ##FATTURA UI
+        tk.Label(conti_frame, text='STATUS', font=("Arial", 14)).grid(row=1, column=0)
+        tk.Label(conti_frame, text='sconto special:', font=("Arial", 14)).grid(row=2, column=0)
+        tk.Label(conti_frame, text='sconto:', font=("Arial", 14)).grid(row=3, column=0)
+        tk.Label(conti_frame, text='PREZZO BASE:', font=("Arial", 14)).grid(row=4, column=0)
+        tk.Label(conti_frame, text='PREZZO:', font=("Arial", 14, "bold")).grid(row=5, column=0)
+
+        ctk.CTkButton(conti_frame, text='CONFERMA', fg_color='#f46881', hover_color='red', width=10,
+                    command=self.conferma).grid(row=6, column=0)
+        ctk.CTkButton(conti_frame, text='CLEAR', hover_color='blue', width=10,
+                    command=self.pulisci).grid(row=6, column=1, pady=2, padx=2)
+
+        selFiltri = self.opts
+        self.actualStatus = tk.StringVar()
+        self.actualStatus.set(selFiltri[0])
+        drop = tk.OptionMenu(conti_frame , self.actualStatus , *selFiltri) # dropdown
+        drop.grid(row = 1, column = 1)
+
+        self.scontoS = tk.Spinbox(conti_frame, increment=0.01, from_=0, to=99, width=5, 
+                                command=self.on_spinbox_change)
+        self.scontoS.grid(row=2, column=1)
+
+        self.scontoT = tk.StringVar(value='0')
+        self.prezzoB = tk.StringVar(value='0')
+        self.prezzoT = tk.StringVar(value='0')
+        tk.Label(conti_frame, textvariable=self.scontoT, font=("Arial", 14)).grid(row=3, column=1)
+        tk.Label(conti_frame, textvariable=self.prezzoB, font=("Arial", 14)).grid(row=4, column=1)
+        tk.Label(conti_frame, textvariable=self.prezzoT, font=("Arial", 14, "bold")).grid(row=5, column=1)
+
+        ##note e id cliente UI
+        tk.Label(note_frame, text='ID cliente:', font=("Arial", 12)).grid(row=0, column=0)
+        self.NOME = tk.Entry(note_frame, text='', font=("Arial", 12))
+        self.NOME.grid(row=1, column=0)
+        tk.Label(note_frame, text='NOTE:', font=("Arial", 12)).grid(row=2, column=0)
+        self.NOTE = tk.Text(note_frame, width = 30, height=4)
+        self.NOTE.grid(row=3, column=0)
+
+    def calcola_resto(self):
+        self.valore_resto.set('€ '+str(float(self.valore_consegna.get()) - self.prezzoFattura))
+        
+    def updt_spin(self, sb, add):
+        new = int(sb.get()) + add
+        if (new<0):
+            new=0
+        sb.delete(0,"end")
+        sb.insert(0, str(new))
+        self.on_spinbox_change()
+        
+    def on_spinbox_change(self):
+        self.fattura()
+
+    def calcola_fattura(self):
+        Qvet = np.array([int(q.get()) for q in self.sbListQ])
+        Svet = np.array([float(q.get()) for q in self.sbListS])
+        Pvet = np.array(self.impo['prezzo'])
+        contaPanini = np.array(self.impo['categoria'] == 'P')
+        contaContorni = np.array(self.impo['categoria'] == 'C')
+        contaBibite = np.array(self.impo['categoria'] == 'B')
+        prezzoBase = np.dot(Qvet, Pvet)
+        sconto1 = np.dot(Qvet, Svet)
+        sconto0 = float(self.scontoS.get())
+        scontoPC = min(np.sum(Qvet[contaPanini]), np.sum(Qvet[contaContorni])) * float(self.scontoPC.get())
+        scontoPB = min(np.sum(Qvet[contaPanini]), np.sum(Qvet[contaBibite])) * float(self.scontoPB.get())
+        scontoCB = min(np.sum(Qvet[contaContorni]), np.sum(Qvet[contaBibite])) * float(self.scontoCB.get())
+        sconto = sconto1 + sconto0 + scontoPC + scontoPB + scontoCB
+        prezzoFattura = round(prezzoBase - sconto, 2)
+        return Qvet, Svet, Pvet, sconto, sconto0, scontoPC, scontoPB, scontoCB, prezzoBase, prezzoFattura
+
+    def fattura(self):
+        Qvet, Svet, Pvet, sconto, sconto0, scontoPC, scontoPB, scontoCB, prezzoBase, prezzoFattura = self.calcola_fattura()
+        self.prezzoFattura = prezzoFattura
+        self.scontoT.set("€ "+str(round(sconto, 2)))
+        self.prezzoB.set("€ "+str(round(prezzoBase,2)))
+        self.prezzoT.set("€ "+str(self.prezzoFattura))
+        self.scontoPCT.set("€ "+str(round(scontoPC,2)))
+        self.scontoPBT.set("€ "+str(round(scontoPB,2)))
+        self.scontoCBT.set("€ "+str(round(scontoCB,2)))
+        self.calcola_resto()
+
+    def conferma(self):
+        Qvet, Svet, Pvet, sconto, sconto0, scontoPC, scontoPB, scontoCB, prezzoBase, prezzoFattura = self.calcola_fattura()
+        prezzo = prezzoBase - sconto
+        clientID = self.NOME.get()
+        note = self.NOTE.get("1.0","end").replace("\n", "")
+        orario = dt.datetime.now()
+        giorno = ['lun', 'mar', 'mer', 'gio', 'ven', 'sab', 'dom'][orario.weekday()]
+
+        riga = np.append(np.array([clientID, self.actualStatus.get(), sconto0, sconto, prezzo, giorno, str(orario), note]), Qvet)
+        
+        self.pulisci()
+        if (prezzoBase>0):
+            self.aggiornaDati(riga)
+            print(riga)
+        else:
+            print('ordine nullo')
+
+    def pulisci(self):
+        
+        for j in range(len(self.sbListQ)):
+            self.sbListQ[j].delete(0,"end")
+            self.sbListQ[j].insert(0, "0")
+        
+        self.scontoS.delete(0,"end")
+        self.scontoS.insert(0, "0")
+
+        self.valore_consegna.delete(0,"end")
+        self.valore_consegna.insert(0, "0")
+        self.calcola_resto()
+
+        self.NOTE.delete("1.0","end")
+        self.NOME.delete(0,"end")
+        self.IDCLIENT()
+        self.fattura()
+
+    def IDCLIENT(self):
+        id = len(self.dataset)
+        self.NOME.insert(0,'cli:'+str(id + 10))
+
+
+############################################################################################################ IMPOSTAZIONI
+
+    def setupImpoUI(self):
+        self.impo_frame = tk.Frame(self.root)
+        self.impo_frame.pack(expand=True, pady=5, padx=5)  
+
+        ##nuovo form per le impostazioni
+        self.impoListForm = tk.Frame(self.impo_frame)
+        self.impoListForm.pack(side = tk.TOP)
+        impoControl = tk.Frame(self.impo_frame)
+        impoControl.pack(side = tk.TOP)
+
+        #per avere informazioni dall'oggetto
+        self.listaNomiProdotti = []
+        self.listaCategorieProdotti = []
+        self.listaPrezziProdotti = []
+        #per eliminare l'oggetto
+        self.listaIndiciProdotti = []
+        self.listaRigheProdotti = []
+        self.lastID = 0
+        tk.Button(impoControl, text="AGGIUNGI PRODOTTO +", command=self.aggiungiProdotto).pack(side=tk.TOP)
+        tk.Button(impoControl, text="CONFERMA IMPOSTAZIONI E RIGENERA DATI", command=self.confermaImpostazioni).pack(side=tk.TOP)
+        tk.Label(impoControl, text='* P = panino, C = contorno, B = bibita', font = ("Arial", 8)).pack(side=tk.TOP)
+
+        self.auto_fill_impo()  #riempi in automatico con i dati già presenti
+
+    def aggiungiProdotto(self, nome_prod=None, prezzo_prod=None, cat_prod=None):
+        row = tk.Frame(self.impoListForm)
+        row.pack(side=tk.TOP)
+        nome = tk.Entry(row)
+        nome.pack(side=tk.LEFT)
+        tk.Label(row, text="€", font=('Arial', 10)).pack(side=tk.LEFT)
+        prezzo = tk.Spinbox(row, from_=0, to=99, increment=0.01, 
+                            font=('Arial', 10), width=6, repeatinterval=100, repeatdelay=500)
+        prezzo.pack(side=tk.LEFT, padx=10)
+
+        clicked = tk.StringVar()
+        clicked.set(self.cats[0]) # initial menu text
+        drop = tk.OptionMenu(row , clicked , *self.cats) # dropdown
+        drop.pack(side=tk.LEFT, padx=10) 
+
+        tk.Button(row, text='RIMUOVI -', font=('Arial', 10), command= lambda x=self.lastID: self.rimuoviRigaImpo(x)).pack(side=tk.LEFT)
+
+        #per avere informazioni dall'oggetto
+        self.listaNomiProdotti.append(nome)
+        self.listaCategorieProdotti.append(clicked)
+        self.listaPrezziProdotti.append(prezzo)
+        #per eliminare l'oggetto
+        self.listaIndiciProdotti.append(self.lastID)
+        self.listaRigheProdotti.append(row)
+        self.lastID += 1
+
+        if (nome_prod != None):    
+            #aggiorna entry
+            nome.delete(0,tk.END)    
+            nome.insert(0,nome_prod)
+            #aggiorna spinbox (come entry)
+            prezzo.delete(0,tk.END)
+            prezzo.insert(0,prezzo_prod)
+            #aggiorna dropdown
+            clicked.set(cat_prod)
+
+    
+    def auto_fill_impo(self):
+        prezzi = self.impo['prezzo']
+        prodotti = self.impo['prodotto']
+        categorie = self.impo['categoria']
+
+        for r in range(len(categorie)):
+            self.aggiungiProdotto(prodotti[r], prezzi[r], categorie[r])
+
+
+
+
+    def rimuoviRigaImpo(self, id):
+        id = self.listaIndiciProdotti.index(id)
+        self.listaRigheProdotti[id].destroy()
+
+        self.listaRigheProdotti.pop(id)
+        self.listaIndiciProdotti.pop(id)
+        self.listaPrezziProdotti.pop(id)
+        self.listaCategorieProdotti.pop(id)
+        self.listaNomiProdotti.pop(id)
+
+
+    def confermaImpostazioni(self):
+        N = len(self.listaNomiProdotti)
+        df = pd.DataFrame(columns=['prodotto', 'prezzo', 'categoria'])
+        for i in range(N):
+
+            prod = self.listaNomiProdotti[i].get()
+            prezzo = float(self.listaPrezziProdotti[i].get())
+            cat = self.listaCategorieProdotti[i].get()
+
+            df.loc[i] = [prod, prezzo, cat]
+        
+        df.to_csv(self.path_impo, sep=';', index=False, decimal=',')
+        self.impo = df
+        self.fill_cassa()
+        #self.hideshowcassa(False)
+        self.backupDati()
+        self.creaDati()
+
+
+
+
+
+############################################################################################################ TOOLS
+
+    def setupPanelOpt(self):
+        self.opt_frame = tk.Frame(self.root)
+        self.opt_frame.pack(expand=True,pady=5, padx=5, fill=tk.BOTH)
+
+        panelopt_frame = tk.Frame(self.opt_frame)
+        panelopt_frame.pack(pady=10, padx=10, side=tk.TOP)
+
+        def call_gen_rows():
+            #self.parent.SV.gen_rows() #correct for just one sales viewer
+
+            pop_ids = []
+            for i in range(len(self.parent.svlist)):  
+                sv = self.parent.svlist[i]
+                try:
+                    sv.gen_rows()
+                except:
+                    pop_ids.append(i)
+
+                #if (sv is not None):
+                #    sv.gen_rows()
+                #else:
+                #    pop_ids.append(i)
+            for i in pop_ids:
+                self.parent.svlist.pop(i)
+
+                
+
+        #filtra per tipo di ordine
+        selFiltri = self.opts
+        selFiltri.append('ALL')
+        self.selezione = tk.StringVar()
+        self.selezione.set('ALL')
+        drop = tk.OptionMenu(panelopt_frame , self.selezione , *selFiltri,
+        command = lambda e: call_gen_rows()) # dropdown
+        drop.pack(side=tk.LEFT, padx=10) 
+
+        # cambia le dimensioni del font
+        tk.Label(panelopt_frame, text='Regola Font:', font=('Calibri', '12', 'bold')).pack(side=tk.LEFT, padx=10) # display selected
+
+        self.spinfont = tk.Spinbox(panelopt_frame, from_=5, to=50, increment=1, 
+                                font=('Calibri', '12', 'bold'), width=5, 
+                                repeatinterval=100, repeatdelay=500,
+                                command = call_gen_rows)
+        self.spinfont.pack(side=tk.LEFT)
+        self.spinfont.delete(0, tk.END)
+        self.spinfont.insert(0, "20")
+
+        tk.Button(panelopt_frame, text='open sales viewer', 
+                    command = self.apri_panel,
+                    font=('Calibri', '12', 'bold')).pack(side=tk.LEFT, padx=10)
+        
+
+        tk.Button(self.opt_frame, text='open cost analyzer', 
+                    command = self.apri_costi,
+                    font=('Calibri', '12', 'bold')).pack(side=tk.TOP, padx=10, pady=10)
+
+        tk.Button(self.opt_frame, text='open finance manager', 
+                    command = self.apri_finance,
+                    font=('Calibri', '12', 'bold')).pack(side=tk.TOP, padx=10, pady=10)
+
+
+    
+    def apri_panel(self):
+        parent = self.parent
+        windowB = tk.Toplevel(self.root)
+        #parent.SV = parent.SalesViewer(parent, windowB)
+        parent.svlist.append(parent.SalesViewer(parent, windowB))
+        for sv in parent.svlist:
+            sv.update()
+        #parent.SV.update()
+
+    def apri_finance(self):
+        parent = self.parent
+        windowB = tk.Toplevel(self.root)
+        parent.FM = parent.FinanceManager(parent, windowB)
+
+    def apri_costi(self):
+        parent = self.parent
+        windowB = tk.Toplevel(self.root)
+        parent.FM = parent.CostManager(parent, windowB)
+
+
+    def setupHelp(self):
+        self.help_frame = tk.Frame(self.root)
+        self.help_frame.pack(expand=True, pady=5, padx=5, fill=tk.BOTH)  
+        
+        testo = testoHelp().txt
+
+        scroll_bar = tk.Scrollbar(self.help_frame)
+        scroll_bar.pack(side=tk.RIGHT)
+        manuale = ScrolledText(scroll_bar, font=('Calibri', 15), width=150, height=100)     
+        manuale.insert(tk.END, testo)
+        manuale.pack(side=tk.LEFT, padx=10, pady=10, expand=True, fill=tk.BOTH)
+
+    # def hideshowcassa(self, cassaOn):
+    #     if (cassaOn):
+    #         self.hideshowplot(False)
+    #         self.hideshoworder(False)
+    #         self.hideshowimpo(False)
+    #         self.hideshowhelp(False)
+    #         self.hideshowpanelopt(False)
+    #         self.cassa_frame.pack(expand=True, pady=20)
+    #     else:
+    #         self.cassa_frame.pack_forget()
+
+    # def hideshowplot(self, plotOn):
+    #     if (plotOn):
+    #         self.hideshowcassa(False)
+    #         self.hideshoworder(False)
+    #         self.hideshowimpo(False)
+    #         self.hideshowhelp(False)
+    #         self.hideshowpanelopt(False)
+    #         self.plot_frame.pack(expand=True, pady=5, padx=5, fill=tk.BOTH)
+    #     else:
+    #         self.plot_frame.pack_forget()
+
+    # def hideshoworder(self, orderOn):
+    #     if (orderOn):
+    #         self.hideshowcassa(False)
+    #         self.hideshowplot(False)
+    #         self.hideshowimpo(False)
+    #         self.hideshowhelp(False)
+    #         self.hideshowpanelopt(False)
+    #         self.order_frame.pack(expand=True, pady=5, padx=5, fill=tk.BOTH)
+    #         self.fill_scrollbar()
+    #     else: 
+    #         self.order_frame.pack_forget()
+
+    # def hideshowimpo(self, impoOn):
+    #     if (impoOn):
+    #         self.hideshowcassa(False)
+    #         self.hideshowplot(False)
+    #         self.hideshoworder(False)
+    #         self.hideshowpanelopt(False)
+    #         self.hideshowhelp(False)
+    #         self.impo_frame.pack(expand=True, pady=5, padx=5) 
+    #     else:
+    #         self.impo_frame.pack_forget()
+
+    # def hideshowpanelopt(self, poOn):
+    #     if (poOn):
+    #         self.hideshowcassa(False)
+    #         self.hideshowplot(False)
+    #         self.hideshoworder(False)
+    #         self.hideshowhelp(False)
+    #         self.hideshowimpo(False)
+    #         self.opt_frame.pack(expand=True, pady=5, padx=5) 
+    #     else:
+    #         self.opt_frame.pack_forget()            
+
+    # def hideshowhelp(self, helpOn):
+    #     if (helpOn):
+    #         self.hideshowcassa(False)
+    #         self.hideshowplot(False)
+    #         self.hideshoworder(False)
+    #         self.hideshowimpo(False)
+    #         self.hideshowpanelopt(False)
+    #         self.help_frame.pack(expand=True, pady=5, padx=5) 
+    #     else:
+    #         self.help_frame.pack_forget()        
+
+
+
+
+############################################################################################################ REPORT-PLOT
+
+    def setupPlot(self):
+
+        self.plot_frame = tk.Frame(self.root, bd=2, relief="groove")
+        self.plot_frame.pack(expand=True, pady=5, padx=5, fill=tk.BOTH) 
+
+        self.fig, self.axs = plt.subplots(1, 2, figsize=(12, 4))
+        self.canvas = FigureCanvasTkAgg(self.fig, master=self.plot_frame)
+        self.canvas.draw()
+        self.canvas.get_tk_widget().pack(pady=50, padx=10, fill=tk.BOTH)
+
+        ctk.CTkButton(master = self.plot_frame, text="Refresh Plot", command=self.plotta).pack(side=tk.TOP)
+        #self.hideshowplot(False)
+
+
+    def plotta(self):
+        #self.hideshowplot(True)
+        self.show_frame('plot')
+
+        # data for plotting
+        colonne = list(self.impo['prodotto']) + ['sconto', 'prezzo']
+        for c in colonne:
+            self.dataset[c] = pd.to_numeric(self.dataset[c])
+
+        # Pie
+        self.axs[0].clear()
+        if (len(self.dataset) > 2):
+
+            df1 = self.dataset[self.impo['prodotto']]
+            totali = [df1[prod].sum() for prod in self.impo['prodotto']]
+
+            self.axs[0].pie(totali, labels = self.impo['prodotto'], startangle=45, autopct='%1.1f%%')#,pctdistance=1.25, labeldistance=.6) #autopct=absolute_value)
+            self.axs[0].set_title('ventite totali')
+
+        # Pivot
+        self.axs[1].clear()
+        if (len(self.dataset) > 0):
+            pivoTab = self.dataset.pivot_table(index = 'giorno', 
+                                            values = colonne,
+                                            aggfunc='sum',
+                                            sort=False).T
+
+            ####totali panini
+            nomi = np.array(self.impo['prodotto'])[self.impo['categoria']=='P'].tolist()
+            pivoTab_p = self.dataset.pivot_table(index = 'giorno', 
+                                            values = nomi,
+                                            aggfunc='sum',
+                                            sort=False).T
+            newrow = pivoTab_p.sum(axis=0)
+            newrow.name = 'totPanini'
+            pivoTab = pd.concat([pivoTab, newrow.to_frame().T])
+
+            ####totali contorni
+            nomi = np.array(self.impo['prodotto'])[self.impo['categoria']=='C'].tolist()
+            pivoTab_p = self.dataset.pivot_table(index = 'giorno', 
+                                            values = nomi,
+                                            aggfunc='sum',
+                                            sort=False).T
+            newrow = pivoTab_p.sum(axis=0)
+            newrow.name = 'totContorni'
+            pivoTab = pd.concat([pivoTab, newrow.to_frame().T])
+
+            ####totali bibite
+            nomi = np.array(self.impo['prodotto'])[self.impo['categoria']=='B'].tolist()
+            pivoTab_p = self.dataset.pivot_table(index = 'giorno', 
+                                            values = nomi,
+                                            aggfunc='sum',
+                                            sort=False).T
+            newrow = pivoTab_p.sum(axis=0)
+            newrow.name = 'totBibite'
+            pivoTab = pd.concat([pivoTab, newrow.to_frame().T])
+
+            ####totale in settimana di ogni voce
+            pivoTab = pivoTab.assign(TOT=pivoTab.sum(axis=1))
+            
+            #####creazione tabella
+            for c in pivoTab.columns:
+                    pivoTab[c] = pivoTab[c].astype(int)
+
+            self.axs[1].axis('off')
+            self.axs[1].table(cellText = pivoTab.values, rowLabels = pivoTab.index, colLabels=pivoTab.columns, loc ='center')
+            #self.axs[1].set_title('totali per giorno')  #questo titolo si sovrappone alla tabella
+
+        self.canvas.draw()
+
+
+
+
+############################################################################################################ ORDINI
+
+    def setupOrdini(self):
+        self.order_frame = tk.Frame(self.root)
+        self.order_frame.pack(expand=True, pady=5, padx=5)  
+
+        scrollbar = tk.Scrollbar(self.order_frame)    # Creiamo una barra di scorrimento verticale
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        self.ord_canvas = tk.Canvas(self.order_frame, yscrollcommand=scrollbar.set)  # Creiamo un canvas che conterrà il frame scrollabile
+        self.ord_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
+        scrollbar.config(command=self.ord_canvas.yview)
+
+        self.scrollable_frame = tk.Frame(self.ord_canvas)    # Creiamo un frame all'interno del canvas
+        self.ord_canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")  # Creiamo un window per il canvas, che conterrà il frame scrollabile
+        def on_configure(event):  # Funzione per aggiornare la dimensione del canvas al ridimensionamento del frame
+                self.ord_canvas.configure(scrollregion=self.ord_canvas.bbox("all"))
+        self.scrollable_frame.bind("<Configure>", on_configure)
+
+        self.fill_scrollbar()
+
+    def fill_scrollbar(self):
+        self.scrollable_frame.destroy()
+
+        self.scrollable_frame = tk.Frame(self.ord_canvas)    # Creiamo un frame all'interno del canvas
+        self.ord_canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")  # Creiamo un window per il canvas, che conterrà il frame scrollabile
+        def on_configure(event):  # Funzione per aggiornare la dimensione del canvas al ridimensionamento del frame
+                self.ord_canvas.configure(scrollregion=self.ord_canvas.bbox("all"))
+        self.scrollable_frame.bind("<Configure>", on_configure)
+
+        # Stile personalizzato
+        label_font = ("Arial", 14)
+        button_font = ("Arial", 8, "bold")
+        row_height = 1  # altezza righe separatrici
+
+        for i in range(len(self.dataset)):
+                i = len(self.dataset) - (i+1)
+
+                str_Nome = self.dataset.loc[i, "cliente"]
+
+                #print(self.dataset.columns) #debug sul dataset
+                str_Status = self.dataset.loc[i, "status"]
+                str_gg = self.dataset.loc[i, "giorno"]
+
+                row_frame = tk.Frame(self.scrollable_frame, pady=5)
+                row_frame.pack(fill=tk.X)
+
+                clicked = tk.StringVar()
+                clicked.set(str_Status)
+
+                label_nome = tk.Label(row_frame, text=str_Nome, font=label_font)
+                label_nome.pack(side=tk.LEFT, padx=10)
+                label_status = tk.Label(row_frame, text=str_Status, textvariable=clicked, font=label_font)
+                label_status.pack(side=tk.LEFT, padx=10)
+
+                #clicked.set(self.opts[0])  # initial menu text 
+                drop = tk.OptionMenu(row_frame, clicked, *self.opts,
+                command = lambda sel=i,id = i: self.change_status(id, sel) )  # Create Dropdown menu 
+                drop.pack(side=tk.LEFT, padx=10) 
+
+                label_giorno = tk.Label(row_frame, text=str_gg, font=label_font)
+                label_giorno.pack(side=tk.LEFT, padx=10)
+
+                btn = tk.Button(row_frame, text="REMOVE", font=button_font,
+                command=lambda r = i: self.remove_row(r))
+                btn.pack(side=tk.LEFT, padx=200)
+
+                # Aggiungiamo una linea di separazione
+                separatore = tk.Frame(self.scrollable_frame, height=row_height, bg="gray")
+                separatore.pack(fill=tk.X, pady=1)
+        
+
+    def remove_row(self, id):        
+        self.dataset = self.dataset.drop(self.dataset.index[id]).reset_index(drop=True)
+        self.aggiornaDati0()
+        #print(self.dati)
+        self.parent.update_sv()
+        self.fill_scrollbar()
+        
+
+    def change_status(self, id, status):
+        #print(id)
+        #print(status)
+        self.dataset.loc[id, 'status'] = status
+        self.aggiornaDati0()
+        #self.fill_scrollbar()
+        #self.parent.SV.update()
+        self.parent.update_sv()
+
+
+############################################################################################################ SCONTI
+
+
+    def setupScontiUi(self):
+        sconti_frame = tk.Frame(self.root)
+        sconti_frame.pack(expand=True, pady=5, padx=5)
+
+        scontiControl = tk.Frame(sconti_frame)
+        scontiControl.pack(side = tk.TOP)
+
+
+        self.scontiCatForm = tk.Frame(sconti_frame)
+        self.scontiCatForm.pack(side = tk.LEFT)
+
+        self.scontiListForm = tk.Frame(sconti_frame)
+        self.scontiListForm.pack(side = tk.LEFT)
+
+        self.scontoList = []
+        
+
+
