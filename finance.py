@@ -150,6 +150,7 @@ class FinanceManager:
 
 ########## LIBRO GIORNALE
 
+
     #costruzione libro giornale
     def setupLgUi(self):
         self.lg_frame = tk.Frame(self.root)
