@@ -2,7 +2,6 @@
 
 Prima di creare l'ambiente virtuale di python bisogna decidere quale versione di python si vuole utilizzare
 
-
 Usa pyenv:
 pyenv local 3.8.5
 
