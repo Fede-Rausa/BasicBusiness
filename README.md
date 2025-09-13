@@ -1,5 +1,5 @@
 
-#Basic Business
+# Basic Business
 A dekstop tkinter app for sales management
 
 executabe downloadable [here](https://freddocastoro.itch.io/cassapaniniexe)
