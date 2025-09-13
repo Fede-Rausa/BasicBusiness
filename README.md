@@ -8,6 +8,8 @@ This is the python source code of basic business software.
 You can do whathever You want with that, modify and changing everything.
 To run the app from Python, run the script main.py, while keeping all the others files .py in the same folder
 
+## how to set up the python environment
+
 I suggest You to do the following steps (but there are many other ways) from your cmd prompt terminal:
 1 - using pyenv set the python version to 3.8.5:  pyenv local 3.8.5
 2 - check if the version is the correct one:      python --version
@@ -21,6 +23,8 @@ PS C:\Users\path> myprojectname/Scripts/activate.ps1
 5 - now you're in the correct environment, You can install the dependencies: 
 pip install -r requirements.txt
 
+
+## how to export an exe application
 
 Once you have changed the code, to export an .exe file You need to 
 1 - install the pyinstaller package
@@ -36,6 +40,8 @@ pyinstaller --onefile --windowed --icon=cuteburger.ico main.py
 Then, if everything goes well, after some minutes (can be many) You should find the exe 
 in the dist folder (a folder that will be generated automatically) 
 :)
+
+## small tip
 
 Just for your knowledge, if you want to see all the packages and their versions 
 you have used in your project, just type inside you terminal: pip freeze
