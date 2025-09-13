@@ -45,20 +45,31 @@ class SalesManager:
         self.prezzoFattura = 0
         
     def impostazioniGet(self):
-        if (os.path.exists(self.path_impo)):
+        if os.path.exists(self.path_impo):
             self.impo = pd.read_csv(self.path_impo, sep=';', decimal=',')
+            # Ordina per categoria ogni volta che leggi il file
+            ordine_categoria = ['P', 'C', 'B']
+            self.impo['categoria'] = pd.Categorical(self.impo['categoria'], categories=ordine_categoria, ordered=True)
+            self.impo = self.impo.sort_values('categoria').reset_index(drop=True)
         else:
             self.gen_example_impo()
 
     def gen_example_impo(self):
-            impo = {
-                'prodotto' : ['salamella', 'speck', 'vegetariano', 'patatine', 'an cipolla', 'piadanutella', 'birra','acqua', 'spritz'],
-                'prezzo':   [4,    4,   4,   3,   3,   3,   3,  1.2,  3],
-                'categoria':['P', 'P', 'P', 'C', 'C', 'C', 'B', 'B', 'B']
-            }
-            impo = pd.DataFrame(impo)
-            impo.to_csv(self.path_impo, sep=';', decimal=',', index=False)
-            self.impo=impo
+        impo = {
+            'prodotto' : ['salamella', 'speck', 'vegetariano', 'patatine', 'an cipolla', 'piadanutella', 'birra','acqua', 'spritz'],
+            'prezzo':   [4, 4, 4, 3, 3, 3, 3, 1.2, 3],
+            'categoria':['P', 'P', 'P', 'C', 'C', 'C', 'B', 'B', 'B']
+        }
+        impo = pd.DataFrame(impo)
+
+        # Ordina per categoria prima di salvare
+        ordine_categoria = ['P', 'C', 'B']
+        impo['categoria'] = pd.Categorical(impo['categoria'], categories=ordine_categoria, ordered=True)
+        impo = impo.sort_values('categoria').reset_index(drop=True)
+
+        impo.to_csv(self.path_impo, sep=';', decimal=',', index=False)
+        self.impo = impo
+
 
 
     def importaDati(self):
@@ -456,19 +467,23 @@ class SalesManager:
         N = len(self.listaNomiProdotti)
         df = pd.DataFrame(columns=['prodotto', 'prezzo', 'categoria'])
         for i in range(N):
-
             prod = self.listaNomiProdotti[i].get()
             prezzo = float(self.listaPrezziProdotti[i].get())
             cat = self.listaCategorieProdotti[i].get()
-
             df.loc[i] = [prod, prezzo, cat]
-        
+
+        # Ordina il DataFrame per categoria P, C, B
+        ordine_categoria = ['P', 'C', 'B']
+        df['categoria'] = pd.Categorical(df['categoria'], categories=ordine_categoria, ordered=True)
+        df = df.sort_values('categoria').reset_index(drop=True)
+
         df.to_csv(self.path_impo, sep=';', index=False, decimal=',')
         self.impo = df
         self.fill_cassa()
         #self.hideshowcassa(False)
         self.backupDati()
         self.creaDati()
+
 
 
 
