@@ -1,4 +1,9 @@
 
+#Basic Business
+A dekstop tkinter app for sales management
+
+executabe downloadable [here](https://freddocastoro.itch.io/cassapaniniexe)
+
 This is the python source code of basic business software.
 You can do whathever You want with that, modify and changing everything.
 To run the app from Python, run the script main.py, while keeping all the others files .py in the same folder
