@@ -5,6 +5,7 @@ import datetime as dt
 import os
 
 
+
 class ForecastSales():
     def __init__(self, parent, root):
         self.parent = parent
