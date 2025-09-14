@@ -4,6 +4,7 @@ from salesManager import SalesManager
 from salesViewer import SalesViewer
 from finance import FinanceManager
 from cost_analysis import CostManager
+from forecast import ForecastSales
 
 class SalesTask:
     def __init__(self, root):
@@ -13,6 +14,7 @@ class SalesTask:
         self.SalesViewer = SalesViewer
         self.FinanceManager = FinanceManager
         self.CostManager = CostManager
+        self.ForecastSales = ForecastSales
 
         #sales manager block
         self.SM = SalesManager(self, root)

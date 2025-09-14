@@ -551,6 +551,10 @@ class SalesManager:
                     command = self.apri_finance,
                     font=('Calibri', '12', 'bold')).pack(side=tk.TOP, padx=10, pady=10)
 
+        tk.Button(self.opt_frame, text='open forecast sales', 
+                    command = self.apri_forecast,
+                    font=('Calibri', '12', 'bold')).pack(side=tk.TOP, padx=10, pady=10)
+
 
     
     def apri_panel(self):
@@ -562,6 +566,11 @@ class SalesManager:
             sv.update()
         #parent.SV.update()
 
+    def apri_forecast(self):
+        parent = self.parent
+        windowB = tk.Toplevel(self.root)
+        parent.FS = parent.ForecastSales(parent, windowB)
+
     def apri_finance(self):
         parent = self.parent
         windowB = tk.Toplevel(self.root)
@@ -570,7 +579,7 @@ class SalesManager:
     def apri_costi(self):
         parent = self.parent
         windowB = tk.Toplevel(self.root)
-        parent.FM = parent.CostManager(parent, windowB)
+        parent.CM = parent.CostManager(parent, windowB)
 
 
     def setupHelp(self):
