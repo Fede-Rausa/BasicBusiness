@@ -216,8 +216,14 @@ class SalesManager:
         conti_frame.grid(row=1, column=1)
         note_frame = tk.Frame(self.cassa_frame, bd=2, relief="groove")
         note_frame.grid(row=1, column=2)
-        resto_frame =tk.Frame(self.cassa_frame)
-        resto_frame.grid(row=1, column=0)
+
+        resto_e_sconti_frame = tk.Frame(self.cassa_frame)
+        resto_e_sconti_frame.grid(row=1, column=0)
+
+        resto_frame = tk.Frame(resto_e_sconti_frame, bd=2, relief="groove", pady = 5, padx=5 )
+        resto_frame.grid(row=0, column=0)
+        sconti_frame = tk.Frame(resto_e_sconti_frame, bd=2, relief="groove", pady = 5, padx=5 )
+        sconti_frame.grid(row=1, column=0)
 
         ##RESTO UI
         tk.Label(resto_frame, text='CONSEGNA', font=("Arial", 14)).grid(row=1, column=0)
@@ -239,8 +245,6 @@ class SalesManager:
             sconti.to_csv(self.path_sconti, sep=';', index=False, decimal=',')
 
 
-        sconti_frame = tk.Frame(resto_frame, bd=2, relief="groove", pady = 5, padx=5 )
-        sconti_frame.grid(row=4, column=1)
         tk.Label(sconti_frame, text='IMPOSTA SCONTI', font = ("Arial",14)).grid(row=3, column=0)
         tk.Label(sconti_frame, text='', font = ("Arial",10)).grid(row=4, column=0)
         tk.Label(sconti_frame, text="sconto P+C", font = ("Arial",10)).grid(row=5, column=0)
