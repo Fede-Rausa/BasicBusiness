@@ -1,6 +1,6 @@
 import tkinter as tk
 import pandas as pd
-
+from datetime import datetime
 
 
 class QuantityViewer:
@@ -12,6 +12,12 @@ class QuantityViewer:
         self.path_dataset = "datiCassa.csv"
         self.path_impo = "impostazioniCassa.csv"
         self.opts = ['TODO', 'STBY', 'DONE']
+        self.time_format = "%d/%m/%y %H:%M:%S"
+
+        self.head = tk.Frame(self.root)
+        self.head.grid(row = 1, column = 1, pady = 3)
+        self.base = tk.Frame(self.root)
+        self.base.grid(row = 2, column = 1, pady = 3)
 
 
         self.importa_dati()
@@ -30,6 +36,20 @@ class QuantityViewer:
 
 
     def setupUi(self):
+        self.head_label = tk.Label(self.head, text='timestamp: ' )
+        self.head_label.grid(row=0, column = 1)
+
+        #retrieve time info
+        time_lab = datetime.now().strftime(self.time_format)
+
+        #retrieve last id
+        last_id = self.dataset['cliente'][self.dataset.shape[0]-1]
+
+        #update head
+        self.head_label.config(text = 'last order: ' + last_id + '        last update: ' + time_lab, 
+                               font = ("Arial", self.fontsize - 3 ))
+
+
         # code for creating table
         total_rows = len(self.rows)
         total_columns = len(self.rows[0])
@@ -39,8 +59,8 @@ class QuantityViewer:
             rowcell = []
             for j in range(total_columns):
                 
-                e = tk.Entry(self.root, width=20, fg='blue',
-                            font=self.cf)  #self.cf)#('Arial',16,'bold'))
+                e = tk.Entry(self.base, width=20, fg='blue',
+                             font = ("Arial", self.fontsize, "bold"))
                 
                 e.grid(row=i, column=j)
                 e.insert(tk.END, self.rows[i][j])  #lst[i][j])
@@ -51,7 +71,7 @@ class QuantityViewer:
 
 
 
-    def gen_rows(self):
+    def gen_rows(self):  #called from external
         self.gen_rows0()
         self.updateUi()
 
@@ -73,12 +93,25 @@ class QuantityViewer:
             rows.append(row)
 
         self.rows = rows
-        self.cf = ("Arial", int(self.parent.SM.spinfont2.get()), "bold")
+        self.fontsize = int(self.parent.SM.spinfont2.get())
+        #self.cf = ("Arial", self.fontsize , "bold")
 
         print(int(self.parent.SM.spinfont2.get()))
 
     
     def updateUi(self):
+
+        #retrieve time info
+        time_lab = datetime.now().strftime(self.time_format)
+
+        #retrieve last id
+        last_id = self.dataset['cliente'][self.dataset.shape[0]-1]
+
+        #update head
+        self.head_label.config(text = 'last_order: ' + last_id + '        last update: ' + time_lab,
+                               font = ("Arial", self.fontsize - 3))
+
+        #update cells 
         total_rows = len(self.rows)
         total_columns = len(self.rows[0])
 
@@ -87,7 +120,7 @@ class QuantityViewer:
                 #self.cells[i][j].destroy()
                 self.cells[i][j].delete(0,tk.END)
                 self.cells[i][j].insert(0, self.rows[i][j])
-                self.cells[i][j].config(font = self.cf)
+                self.cells[i][j].config(font = ("Arial", self.fontsize , "bold"))
 
         #self.setupUi()
 
