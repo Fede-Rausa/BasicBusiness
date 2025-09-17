@@ -1,7 +1,7 @@
 import tkinter as tk
 import pandas as pd
 from datetime import datetime
-
+import numpy as np
 
 class QuantityViewer:
     def __init__(self, parent, root):
@@ -28,6 +28,12 @@ class QuantityViewer:
 
     def importa_dati(self):
         self.dataset = pd.read_csv(self.path_dataset, sep=';', decimal=',')
+        #filter data by today 
+        tformat = "%Y-%m-%d %H:%M:%S.%f"   #2025-09-17 14:39:40.405671
+        self.dataset = self.dataset[self.dataset['ts'] != '0']
+        ts = [datetime.strptime(s, tformat).date() for s in  self.dataset['ts']]
+        today = datetime.now().date()
+        self.dataset = self.dataset[today==np.array(ts)]
 
     def load_impo(self):
         self.impo = pd.read_csv(self.path_impo, sep=';', decimal=',')
@@ -46,7 +52,7 @@ class QuantityViewer:
         last_id = self.dataset['cliente'][self.dataset.shape[0]-1]
 
         #update head
-        self.head_label.config(text = 'last order: ' + last_id + '        last update: ' + time_lab, 
+        self.head_label.config(text = 'last order: ' + str(last_id) + '        last update: ' + time_lab, 
                                font = ("Arial", self.fontsize - 3 ))
 
 
@@ -96,7 +102,7 @@ class QuantityViewer:
         self.fontsize = int(self.parent.SM.spinfont2.get())
         #self.cf = ("Arial", self.fontsize , "bold")
 
-        print(int(self.parent.SM.spinfont2.get()))
+        #print(int(self.parent.SM.spinfont2.get()))
 
     
     def updateUi(self):
@@ -108,7 +114,7 @@ class QuantityViewer:
         last_id = self.dataset['cliente'][self.dataset.shape[0]-1]
 
         #update head
-        self.head_label.config(text = 'last_order: ' + last_id + '        last update: ' + time_lab,
+        self.head_label.config(text = 'last order: ' + str(last_id) + '        last update: ' + time_lab,
                                font = ("Arial", self.fontsize - 3))
 
         #update cells 
