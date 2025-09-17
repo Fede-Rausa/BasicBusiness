@@ -30,7 +30,10 @@ class QuantityViewer:
         self.dataset = pd.read_csv(self.path_dataset, sep=';', decimal=',')
         #filter data by today 
         tformat = "%Y-%m-%d %H:%M:%S.%f"   #2025-09-17 14:39:40.405671
-        self.dataset = self.dataset[self.dataset['ts'] != '0']
+        #self.dataset = self.dataset[self.dataset['ts'] != '0']
+        if (self.dataset['ts'][0] == '0'):
+            self.dataset = self.dataset.drop([0])
+
         ts = [datetime.strptime(s, tformat).date() for s in  self.dataset['ts']]
         today = datetime.now().date()
         self.dataset = self.dataset[today==np.array(ts)]
