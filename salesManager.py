@@ -214,7 +214,7 @@ class SalesManager:
         ##AREE UI per fattura, note e resto        
         conti_frame = tk.Frame(self.cassa_frame, bd=2, relief="groove")
         conti_frame.grid(row=1, column=1)
-        note_frame = tk.Frame(self.cassa_frame)
+        note_frame = tk.Frame(self.cassa_frame, bd=2, relief="groove")
         note_frame.grid(row=1, column=2)
         resto_frame =tk.Frame(self.cassa_frame)
         resto_frame.grid(row=1, column=0)
@@ -228,7 +228,7 @@ class SalesManager:
         self.valore_consegna = tk.Spinbox(resto_frame, text='20', increment=0.01, from_=0, to=99, width=5, 
         command=self.calcola_resto, font=("Arial", 12))
         self.valore_consegna.grid(row=1, column=1)
-        tk.Button(resto_frame, text='calcola resto', command=self.calcola_resto, font=("Arial", 14)).grid(row=3, column=1)
+        tk.Button(resto_frame, text='calcola resto', command=self.calcola_resto, font=("Arial", 14)).grid(row=3, column=1, pady=10)
 
 
         ##SCONTO COPPIE DI CATEGORIE UI
@@ -239,24 +239,27 @@ class SalesManager:
             sconti.to_csv(self.path_sconti, sep=';', index=False, decimal=',')
 
 
-        tk.Label(resto_frame, text='', font = ("Arial",10)).grid(row=4, column=0)
-        tk.Label(resto_frame, text="sconto P+C", font = ("Arial",10)).grid(row=5, column=0)
-        tk.Label(resto_frame, text="sconto P+B", font = ("Arial",10)).grid(row=6, column=0)
-        tk.Label(resto_frame, text="sconto C+B", font = ("Arial",10)).grid(row=7, column=0)
-        self.scontoPC = tk.Spinbox(resto_frame, increment=0.01, from_=0, to=99, width=5, command=self.on_spinbox_change)
+        sconti_frame = tk.Frame(resto_frame, bd=2, relief="groove", pady = 5, padx=5 )
+        sconti_frame.grid(row=4, column=1)
+        tk.Label(sconti_frame, text='IMPOSTA SCONTI', font = ("Arial",14)).grid(row=3, column=0)
+        tk.Label(sconti_frame, text='', font = ("Arial",10)).grid(row=4, column=0)
+        tk.Label(sconti_frame, text="sconto P+C", font = ("Arial",10)).grid(row=5, column=0)
+        tk.Label(sconti_frame, text="sconto P+B", font = ("Arial",10)).grid(row=6, column=0)
+        tk.Label(sconti_frame, text="sconto C+B", font = ("Arial",10)).grid(row=7, column=0)
+        self.scontoPC = tk.Spinbox(sconti_frame, increment=0.01, from_=0, to=99, width=5, command=self.on_spinbox_change)
         self.scontoPC.grid(row=5, column=1)
-        self.scontoPB = tk.Spinbox(resto_frame, increment=0.01, from_=0, to=99, width=5, command=self.on_spinbox_change)
+        self.scontoPB = tk.Spinbox(sconti_frame, increment=0.01, from_=0, to=99, width=5, command=self.on_spinbox_change)
         self.scontoPB.grid(row=6, column=1)
-        self.scontoCB = tk.Spinbox(resto_frame, increment=0.01, from_=0, to=99, width=5, command=self.on_spinbox_change)
+        self.scontoCB = tk.Spinbox(sconti_frame, increment=0.01, from_=0, to=99, width=5, command=self.on_spinbox_change)
         self.scontoCB.grid(row=7, column=1)
-        self.scontoPCT = tk.StringVar(resto_frame, "0")
-        tk.Label(resto_frame, textvariable= self.scontoPCT, font = ("Arial",10)).grid(row=5, column=2)
-        self.scontoPBT = tk.StringVar(resto_frame, "0")
-        tk.Label(resto_frame, textvariable= self.scontoPBT, font = ("Arial",10)).grid(row=6, column=2)
-        self.scontoCBT = tk.StringVar(resto_frame, "0")
-        tk.Label(resto_frame, textvariable= self.scontoCBT, font = ("Arial",10)).grid(row=7, column=2)
+        self.scontoPCT = tk.StringVar(sconti_frame, "0")
+        tk.Label(sconti_frame, textvariable= self.scontoPCT, font = ("Arial",10)).grid(row=5, column=2)
+        self.scontoPBT = tk.StringVar(sconti_frame, "0")
+        tk.Label(sconti_frame, textvariable= self.scontoPBT, font = ("Arial",10)).grid(row=6, column=2)
+        self.scontoCBT = tk.StringVar(sconti_frame, "0")
+        tk.Label(sconti_frame, textvariable= self.scontoCBT, font = ("Arial",10)).grid(row=7, column=2)
 
-        tk.Button(resto_frame, text='salva sconti', command=salvasconti,
+        tk.Button(sconti_frame, text='salva sconti', command=salvasconti,
                  font=("Arial", 14)).grid(row=8, column=1)
 
 
@@ -793,6 +796,25 @@ class SalesManager:
         scrollbar = tk.Scrollbar(self.order_frame)    # Creiamo una barra di scorrimento verticale
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
+
+        #header control
+        head_command = tk.Frame(self.order_frame)   #crea header
+        head_command.pack(side=tk.TOP)
+
+        tk.Label(head_command, text='Seleziona status di ogni ordine                ', 
+                 font=('Arial', 12)).pack(side=tk.LEFT, padx=20)
+
+        tk.Label(head_command, text='Seleziona status degli ordini selezionati:', 
+                 font=('Arial', 12)).pack(side=tk.LEFT, padx=1)
+        
+        #global dropdown
+        clicked = tk.StringVar()
+        clicked.set('TODO')
+
+        drop = tk.OptionMenu(head_command, clicked, *self.opts,
+        command = lambda sel = clicked : self.change_status_global(sel) )  # Create Dropdown menu 
+        drop.pack(side=tk.LEFT, padx=1)
+
         self.ord_canvas = tk.Canvas(self.order_frame, yscrollcommand=scrollbar.set)  # Creiamo un canvas che conterrà il frame scrollabile
         self.ord_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
         scrollbar.config(command=self.ord_canvas.yview)
@@ -818,6 +840,7 @@ class SalesManager:
         label_font = ("Arial", 14)
         button_font = ("Arial", 8, "bold")
         row_height = 1  # altezza righe separatrici
+        self.check_list = []
 
         for i in range(len(self.dataset)):
                 i = len(self.dataset) - (i+1)
@@ -831,22 +854,42 @@ class SalesManager:
                 row_frame = tk.Frame(self.scrollable_frame, pady=5)
                 row_frame.pack(fill=tk.X)
 
+                label_nome = tk.Label(row_frame, text=str_Nome, font=label_font)
+                label_nome.pack(side=tk.LEFT, padx=10)
+
+
+                #check box for automatic selection
+                checkVar = tk.IntVar()
+                checkVar.set(0)
+                self.check_list.append(checkVar)
+
+                def read_cv(cv):
+                    print(cv.get())
+
+                checkinput = ctk.CTkCheckBox(row_frame,  text='',  variable=checkVar, 
+                                             onvalue=1, offvalue=0,
+                                             command = lambda cv = checkVar: read_cv(cv))
+                checkinput.pack(side=tk.LEFT, padx=5)                
+
+
+                #dropdown for single selection
                 clicked = tk.StringVar()
                 clicked.set(str_Status)
 
-                label_nome = tk.Label(row_frame, text=str_Nome, font=label_font)
-                label_nome.pack(side=tk.LEFT, padx=10)
                 label_status = tk.Label(row_frame, text=str_Status, textvariable=clicked, font=label_font)
                 label_status.pack(side=tk.LEFT, padx=10)
 
                 #clicked.set(self.opts[0])  # initial menu text 
                 drop = tk.OptionMenu(row_frame, clicked, *self.opts,
-                command = lambda sel=i,id = i: self.change_status(id, sel) )  # Create Dropdown menu 
-                drop.pack(side=tk.LEFT, padx=10) 
+                command = lambda sel = i, id = i: self.change_status(id, sel) )  # Create Dropdown menu 
+                drop.pack(side=tk.LEFT, padx=10)
 
+
+                #day label
                 label_giorno = tk.Label(row_frame, text=str_gg, font=label_font)
                 label_giorno.pack(side=tk.LEFT, padx=10)
 
+                #cancel order button
                 btn = tk.Button(row_frame, text="REMOVE", font=button_font,
                 command=lambda r = i: self.remove_row(r))
                 btn.pack(side=tk.LEFT, padx=200)
@@ -865,7 +908,18 @@ class SalesManager:
         self.fill_scrollbar()
         
 
+    def change_status_global(self, status):
+        ''' cambia lo status di tutti gli ordini selezionati, dal dropdown in alto'''
+        cl = self.check_list
+        ids = np.array([i for i in range(len(cl)) if cl[i].get()==1])
+        for i in ids:
+            i = len(self.dataset) - (i+1) #inverti l'ordine delle righe
+            self.change_status(i, status)
+        self.fill_scrollbar()
+
+
     def change_status(self, id, status):
+        ''' cambia lo status del singolo ordine '''
         #print(id)
         #print(status)
         self.dataset.loc[id, 'status'] = status
