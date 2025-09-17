@@ -348,12 +348,15 @@ class SalesManager:
 
         riga = np.append(np.array([clientID, self.actualStatus.get(), sconto0, sconto, prezzo, giorno, str(orario), note]), Qvet)
         
-        self.pulisci()
+      
         if (prezzoBase>0):
             self.aggiornaDati(riga)
             print(riga)
+            self.stampa_fattura()
         else:
             print('ordine nullo')
+        self.pulisci()
+        self.IDCLIENT()      
 
     def pulisci(self):
         
@@ -370,12 +373,66 @@ class SalesManager:
 
         self.NOTE.delete("1.0","end")
         self.NOME.delete(0,"end")
-        self.IDCLIENT()
+        # self.IDCLIENT()
         self.fattura()
 
     def IDCLIENT(self):
-        id = len(self.dataset)
-        self.NOME.insert(0,'cli:'+str(id + 10))
+        # id = len(self.dataset)
+        # self.NOME.insert(0,'cli:'+str(id + 10))
+        if self.dataset.empty or "cliente" not in self.dataset.columns:
+            new_id_num = 1
+        else:
+            ids = self.dataset["cliente"].dropna().astype(str)
+            nums = []
+            for id_str in ids:
+                if id_str.startswith("cli:"):
+                    try:
+                        nums.append(int(id_str.split(":")[1]))
+                    except ValueError:
+                        pass
+        last_id = max(nums) if nums else 0
+        new_id_num = last_id + 1
+
+        new_id = f"cli:{new_id_num:02d}"
+        self.NOME.delete(0, "end")
+        self.NOME.insert(0, new_id)
+
+
+    
+
+
+    def stampa_fattura(self):
+        import win32print
+        import win32ui
+        Qvet, Svet, Pvet, sconto, sconto0, scontoPC, scontoPB, scontoCB, prezzoBase, prezzoFattura = self.calcola_fattura()
+        clientID = self.NOME.get()
+        note = self.NOTE.get("1.0","end").replace("\n", "")
+        
+        testo = f"Cliente: {clientID}\n"
+        testo += "Prodotti:\n"
+        for i, qty in enumerate(Qvet):
+            if qty > 0:
+                testo += f"   - {self.impo.iloc[i]['prodotto']} x{int(qty)} - EUR {self.impo.iloc[i]['prezzo']*qty:.2f}\n"
+        testo += f"\nTotale: EUR {prezzoFattura:.2f}\n"
+        testo += f"Note: {note}\n"
+        testo += "\n" * 15
+
+        # --- invio alla stampante Windows ---
+        printer_name = "paninoteca"  # nome stampante installata in Windows
+        hprinter = win32print.OpenPrinter(printer_name)
+        try:
+            hjob = win32print.StartDocPrinter(hprinter, 1, ("Scontrino", None, "RAW"))
+            win32print.StartPagePrinter(hprinter)
+            win32print.WritePrinter(hprinter, testo.encode("utf-8"))  # attenzione all'encoding!
+            win32print.EndPagePrinter(hprinter)
+            win32print.EndDocPrinter(hprinter)
+        finally:
+            win32print.ClosePrinter(hprinter)
+
+
+
+
+
 
 
 ############################################################################################################ IMPOSTAZIONI
