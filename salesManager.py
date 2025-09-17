@@ -91,6 +91,7 @@ class SalesManager:
         df.loc[len(df)] = newrow.tolist()
         df.to_csv(self.path_dataset, sep=';', index=False, decimal=',')
         self.parent.update_sv()      #ricarica i sales viewer
+        self.parent.update_qv()      #ricarica i quantity viewer
 
     def aggiornaDati0(self):
         df = self.dataset
@@ -516,6 +517,17 @@ class SalesManager:
             for i in pop_ids:
                 self.parent.svlist.pop(i)
 
+        def call_gen_rows2():
+            pop_ids = []
+            for i in range(len(self.parent.qvlist)):  
+                qv = self.parent.qvlist[i]
+                try:
+                    qv.gen_rows()
+                except:
+                    pop_ids.append(i)       
+            for i in pop_ids:
+                self.parent.qvlist.pop(i)               
+
                 
 
         #filtra per tipo di ordine
@@ -543,6 +555,25 @@ class SalesManager:
                     font=('Calibri', '12', 'bold')).pack(side=tk.LEFT, padx=10)
         
 
+        qpanelopt_frame = tk.Frame(self.opt_frame)
+        qpanelopt_frame.pack(pady=10, padx=10, side=tk.TOP)
+
+        tk.Label(qpanelopt_frame, text='Regola Font:', font=('Calibri', '12', 'bold')).pack(side=tk.LEFT, padx=10) # display selected
+
+        self.spinfont2 = tk.Spinbox(qpanelopt_frame, from_=5, to=50, increment=1, 
+                                font=('Calibri', '12', 'bold'), width=5, 
+                                repeatinterval=100, repeatdelay=500,
+                                command = call_gen_rows2)
+        
+        self.spinfont2.pack(side=tk.LEFT)
+        self.spinfont2.delete(0, tk.END)
+        self.spinfont2.insert(0, "16")
+
+
+        tk.Button(qpanelopt_frame, text='open quantity viewer', 
+                command = self.apri_quantitypanel,
+                font=('Calibri', '12', 'bold')).pack(side=tk.LEFT, padx=10)
+        
         tk.Button(self.opt_frame, text='open cost analyzer', 
                     command = self.apri_costi,
                     font=('Calibri', '12', 'bold')).pack(side=tk.TOP, padx=10, pady=10)
@@ -552,6 +583,13 @@ class SalesManager:
                     font=('Calibri', '12', 'bold')).pack(side=tk.TOP, padx=10, pady=10)
 
 
+
+    def apri_quantitypanel(self):
+        parent = self.parent
+        windowB = tk.Toplevel(self.root)
+        parent.qvlist.append(parent.QuantityViewer(parent, windowB))
+        for qv in parent.qvlist:
+            qv.update()
     
     def apri_panel(self):
         parent = self.parent
@@ -562,15 +600,17 @@ class SalesManager:
             sv.update()
         #parent.SV.update()
 
-    def apri_finance(self):
-        parent = self.parent
-        windowB = tk.Toplevel(self.root)
-        parent.FM = parent.FinanceManager(parent, windowB)
 
     def apri_costi(self):
         parent = self.parent
         windowB = tk.Toplevel(self.root)
         parent.FM = parent.CostManager(parent, windowB)
+
+
+    def apri_finance(self):
+        parent = self.parent
+        windowB = tk.Toplevel(self.root)
+        parent.FM = parent.FinanceManager(parent, windowB)
 
 
     def setupHelp(self):
@@ -821,6 +861,7 @@ class SalesManager:
         self.aggiornaDati0()
         #print(self.dati)
         self.parent.update_sv()
+        self.parent.update_qv()
         self.fill_scrollbar()
         
 
@@ -832,6 +873,7 @@ class SalesManager:
         #self.fill_scrollbar()
         #self.parent.SV.update()
         self.parent.update_sv()
+        self.parent.update_qv()
 
 
 ############################################################################################################ SCONTI

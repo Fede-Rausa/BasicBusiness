@@ -4,6 +4,7 @@ from salesManager import SalesManager
 from salesViewer import SalesViewer
 from finance import FinanceManager
 from cost_analysis import CostManager
+from quantity_viewer import QuantityViewer
 
 class SalesTask:
     def __init__(self, root):
@@ -13,6 +14,7 @@ class SalesTask:
         self.SalesViewer = SalesViewer
         self.FinanceManager = FinanceManager
         self.CostManager = CostManager
+        self.QuantityViewer = QuantityViewer
 
         #sales manager block
         self.SM = SalesManager(self, root)
@@ -26,13 +28,23 @@ class SalesTask:
 
         #sales viewer block
         self.svlist = []
+
         #self.svlist.append(SalesViewer(self, tk.Toplevel(root)))
         #self.update_sv()
+
+        self.qvlist = []
+
         root.protocol("WM_DELETE_WINDOW", self.on_closing)
 
-    def update_sv(self):
+
+        
+    def update_sv(self):   #update the sales viewers
         for sv in self.svlist:
             sv.update()
+
+    def update_qv(self):   #update the quantity viewers
+        for qv in self.qvlist:
+            qv.update()
 
     def schedule_task(self, delay, task):
         after_id = self.root.after(delay, task)
