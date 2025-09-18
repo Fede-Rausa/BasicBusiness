@@ -39,13 +39,12 @@ class QuantityViewer:
         self.dataset = self.dataset[today==np.array(ts)]
 
     def load_impo(self):
-        #self.impo = pd.read_csv(self.path_impo, sep=';', decimal=',')  #buuuug: the products have to be ordered by categories
-        self.impo = pd.read_csv(self.path_impo, sep=';', decimal=',')
-        # Ordina per categoria ogni volta che leggi il file
-        ordine_categoria = ['P', 'C', 'B']
-        self.impo['categoria'] = pd.Categorical(self.impo['categoria'], categories=ordine_categoria, ordered=True)
-        self.impo = self.impo.sort_values('categoria').reset_index(drop=True)
-
+        #self.impo = pd.read_csv(self.path_impo, sep=';', decimal=',')  #buuuug: the products have to be ordered by categories !?
+        self.impo = pd.read_csv(self.path_impo, sep=';', decimal=',')   
+        # Ordina per categoria ogni volta che leggi il file  #new buuug: something blocks the update
+        # ordine_categoria = ['P', 'C', 'B']
+        # self.impo['categoria'] = pd.Categorical(self.impo['categoria'], categories=ordine_categoria, ordered=True)
+        # self.impo = self.impo.sort_values('categoria').reset_index(drop=True)
 
 
 
@@ -60,7 +59,7 @@ class QuantityViewer:
         #cli = np.array(self.dataset['cliente'])
         #last_id = cli[len(cli)-1]
         self.dataset = self.dataset.reset_index()
-        last_id = self.dataset['cliente'][self.dataset.shape[0]-1]
+        last_id = self.dataset['cliente'].iloc[self.dataset.shape[0]-1]
 
         #update head
         self.head_label.config(text = 'last order: ' + str(last_id) + '        last update: ' + time_lab, 
@@ -122,8 +121,8 @@ class QuantityViewer:
         time_lab = datetime.now().strftime(self.time_format)
 
         #retrieve last id
-        self.dataset = self.dataset.reset_index()
-        last_id = self.dataset['cliente'][self.dataset.shape[0]-1]
+        self.dataset = self.dataset.reset_index(drop=True) #solution for pandas ValueError: cannot insert level_0, already exists
+        last_id = self.dataset['cliente'].iloc[self.dataset.shape[0]-1] #use iloc before [] for indexing pd.df
 
         #update head
         self.head_label.config(text = 'last order: ' + str(last_id) + '        last update: ' + time_lab,

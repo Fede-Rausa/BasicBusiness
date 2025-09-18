@@ -541,6 +541,7 @@ class SalesManager:
                     qv.gen_rows()
                 except:
                     pop_ids.append(i)       
+
             for i in pop_ids:
                 self.parent.qvlist.pop(i)               
 
