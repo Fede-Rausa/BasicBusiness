@@ -428,9 +428,8 @@ class SalesManager:
             finally:
                 win32print.ClosePrinter(hprinter)
         except Exception as e:
-            print(f"⚠️ Errore di stampa: {e}")
-            import tkinter.messagebox as mb
-            mb.showwarning("Stampa non riuscita", f"Impossibile stampare lo scontrino.\n{e}")
+            print(f"Errore di stampa: {e}")
+
 
 
 
