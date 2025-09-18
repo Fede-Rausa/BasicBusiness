@@ -398,12 +398,10 @@ class SalesManager:
         self.NOME.insert(0, new_id)
 
 
-    
-
-
     def stampa_fattura(self):
         import win32print
         import win32ui
+        
         Qvet, Svet, Pvet, sconto, sconto0, scontoPC, scontoPB, scontoCB, prezzoBase, prezzoFattura = self.calcola_fattura()
         clientID = self.NOME.get()
         note = self.NOTE.get("1.0","end").replace("\n", "")
@@ -417,17 +415,23 @@ class SalesManager:
         testo += f"Note: {note}\n"
         testo += "\n" * 15
 
-        # --- invio alla stampante Windows ---
-        printer_name = "paninoteca"  # nome stampante installata in Windows
-        hprinter = win32print.OpenPrinter(printer_name)
+        printer_name = "paninoteca"  
+
         try:
-            hjob = win32print.StartDocPrinter(hprinter, 1, ("Scontrino", None, "RAW"))
-            win32print.StartPagePrinter(hprinter)
-            win32print.WritePrinter(hprinter, testo.encode("utf-8"))  # attenzione all'encoding!
-            win32print.EndPagePrinter(hprinter)
-            win32print.EndDocPrinter(hprinter)
-        finally:
-            win32print.ClosePrinter(hprinter)
+            hprinter = win32print.OpenPrinter(printer_name)
+            try:
+                hjob = win32print.StartDocPrinter(hprinter, 1, ("Scontrino", None, "RAW"))
+                win32print.StartPagePrinter(hprinter)
+                win32print.WritePrinter(hprinter, testo.encode("utf-8"))
+                win32print.EndPagePrinter(hprinter)
+                win32print.EndDocPrinter(hprinter)
+            finally:
+                win32print.ClosePrinter(hprinter)
+        except Exception as e:
+            print(f"⚠️ Errore di stampa: {e}")
+            import tkinter.messagebox as mb
+            mb.showwarning("Stampa non riuscita", f"Impossibile stampare lo scontrino.\n{e}")
+
 
 
 
