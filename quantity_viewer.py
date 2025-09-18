@@ -6,7 +6,7 @@ import numpy as np
 class QuantityViewer:
     def __init__(self, parent, root):
         
-        self.root=root
+        self.root = root
         self.parent = parent
         self.root.title("Quantity Viewer")
         self.path_dataset = "datiCassa.csv"
@@ -39,7 +39,12 @@ class QuantityViewer:
         self.dataset = self.dataset[today==np.array(ts)]
 
     def load_impo(self):
+        #self.impo = pd.read_csv(self.path_impo, sep=';', decimal=',')  #buuuug: the products have to be ordered by categories
         self.impo = pd.read_csv(self.path_impo, sep=';', decimal=',')
+        # Ordina per categoria ogni volta che leggi il file
+        ordine_categoria = ['P', 'C', 'B']
+        self.impo['categoria'] = pd.Categorical(self.impo['categoria'], categories=ordine_categoria, ordered=True)
+        self.impo = self.impo.sort_values('categoria').reset_index(drop=True)
 
 
 
