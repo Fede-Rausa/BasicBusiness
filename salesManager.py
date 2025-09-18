@@ -721,17 +721,57 @@ class SalesManager:
         self.report_frame = tk.Frame(self.plot_frame, bd=2, relief="groove")
         self.report_frame.pack(side = tk.LEFT)
 
-        price_lab = tk.Label(self.report_frame, font=('Arial', 14))
-        price_lab.pack(side=tk.LEFT, pady=10)
-        dis_lab = tk.Label(self.report_frame)
-        dis_lab.pack(side=tk.LEFT, pady=10)
-        self.report_labs = price_lab, dis_lab
+        #old good work
+        # price_lab = tk.Label(self.report_frame, font=('Arial', 14))
+        # price_lab.pack(side=tk.LEFT, pady=10)
+        # dis_lab = tk.Label(self.report_frame)
+        # dis_lab.pack(side=tk.LEFT, pady=10)
+        # self.report_labs = price_lab, dis_lab
+
+        # self.fig, self.axs = plt.subplots(3, 3, figsize=(15, 12))
+        # self.canvas = FigureCanvasTkAgg(self.fig, master=self.plot_frame)
+        # self.canvas.draw()
+        # self.canvas.get_tk_widget().pack(pady=10, padx=10, fill=tk.BOTH)
 
 
-        self.fig, self.axs = plt.subplots(3, 3, figsize=(15, 12))
-        self.canvas = FigureCanvasTkAgg(self.fig, master=self.plot_frame)
-        self.canvas.draw()
-        self.canvas.get_tk_widget().pack(pady=10, padx=10, fill=tk.BOTH)
+        #new work
+        report_lab = tk.Label(self.report_frame, font=('Arial', 14))
+        report_lab.pack(side=tk.TOP, pady=10)
+        
+        self.plot_id = ctk.StringVar(value="prod_sales")
+        report_dd = ctk.CTkComboBox(self.report_frame, values=["prod_sales", "day_revenue"],
+                                            command=self.call_plot, variable=self.plot_id)
+        
+        self.plot_id.set("prod_sales")
+        report_dd.pack(side=tk.TOP, pady=10)
+
+
+        self.report_labs = report_lab
+
+        fig1 , axs1 = plt.subplots(2, 2, figsize=(15, 12))
+        fig2, axs2 = plt.subplots(2,2, figsize=(15,12))
+        fig3, axs3 = plt.subplots(1,1, figsize=(15,12))
+        canv1 = FigureCanvasTkAgg(fig1, master=self.plot_frame)
+        canv1.draw()
+        canv1.get_tk_widget().pack(pady=10, padx=10, fill=tk.BOTH)
+        canv2 = FigureCanvasTkAgg(fig2, master=self.plot_frame)
+        canv2.draw()
+        canv2.get_tk_widget().pack(pady=10, padx=10, fill=tk.BOTH)
+        canv3 = FigureCanvasTkAgg(fig3, master=self.plot_frame)
+        canv3.draw()
+        canv3.get_tk_widget().pack(pady=10, padx=10, fill=tk.BOTH)
+
+        self.axs_list = axs1, axs2, axs3
+        self.canv_list = canv1, canv2, canv3
+        
+
+    def call_plot(self, plot_id):
+        if plot_id == 'prod_sales':
+            self.prod_charts()
+        
+        if plot_id == 'day_revenue':
+            self.day_charts()
+
 
         #ctk.CTkButton(master = self.plot_frame, text="Refresh Plot", command=self.plotta).pack(side=tk.TOP)
         #self.hideshowplot(False)
@@ -742,11 +782,191 @@ class SalesManager:
         tot_quantity = self.dataset[self.impo['prodotto']].astype(int).sum(axis=1).sum()
         tot_orders = np.array(self.dataset['prezzo'].astype(float) > 0).astype(int).sum()
 
-        price_lab, dis_lab = self.report_labs
-        price_lab.config(text = 'RICAVI: '+ str(tot_price) + '€' + '\n' 
+        report_lab = self.report_labs
+        report_lab.config(text = 'RICAVI: '+ str(tot_price) + '€' + '\n' 
                          + 'SCONTI: '+str(tot_dis) + '€' + '\n' 
                          + '#CLIENTI: ' + str(tot_orders)+ '\n'
                          + '#VENDUTO: ' + str(tot_quantity)  )
+
+    def prod_charts(self):
+
+        axs1 , axs2, axs3 = self.axs_list# = self.axs_list#, axs2, axs3 = self.axs_list
+        canv1, canv2, canv3 = self.canv_list# = self.canv_list#, canv2, canv3 = self.canv_list
+
+        canv2.get_tk_widget().pack_forget()
+        canv3.get_tk_widget().pack_forget()
+        canv1.get_tk_widget().pack(pady=10, padx=10, fill=tk.BOTH)
+
+        if (len(self.dataset) > 2):
+
+            colonne = list(self.impo['prodotto']) #+ ['sconto', 'prezzo']
+            for c in colonne:
+                self.dataset[c] = pd.to_numeric(self.dataset[c])
+
+
+            df = self.dataset.copy()
+            if (df['ts'][0] == '0') or (df['ts'][0] == 0):
+               df = df.drop([0])
+
+            #filter data by today 
+            tformat = "%Y-%m-%d %H:%M:%S.%f"   #2025-09-17 14:39:40.405671
+            ts = [datetime.strptime(s, tformat).date() for s in  df['ts']]
+            df['date'] = ts
+
+            # df['date'] = self.dataset['ts']
+
+            pivoTab = df.pivot_table(index = 'date', 
+                                            values = colonne,
+                                            aggfunc='sum',
+                                            sort=False).T
+
+            for c in self.cats:
+                nomi = np.array(self.impo['prodotto'])[self.impo['categoria']==c].tolist()
+                pivoTab_p = df.pivot_table(index = 'date', 
+                                                values = nomi,
+                                                aggfunc='sum',
+                                                sort=False).T
+                newrow = pivoTab_p.sum(axis=0)
+                newrow.name = 'tot' + c
+                pivoTab = pd.concat([pivoTab, newrow.to_frame().T])
+
+            ####totale di ogni voce
+            pivoTab = pivoTab.assign(TOT = pivoTab.sum(axis=1))
+            
+            #####creazione tabella
+            for c in pivoTab.columns:
+                    pivoTab[c] = pivoTab[c].astype(int)
+
+            axs1[0][1].clear()
+            axs1[0][1].axis('off')
+            axs1[0][1].table(cellText = pivoTab.values, rowLabels = pivoTab.index, colLabels=pivoTab.columns, loc ='center')
+
+
+            #pie chart
+
+            #df1 = self.dataset[self.impo['prodotto']]
+            #totali = [df1[prod].astype(int).sum() for prod in self.impo['prodotto']]
+            prod_names = self.impo['prodotto']
+            totali = pivoTab['TOT'][prod_names]
+
+
+            axs1[0][0].clear()
+            wedges, texts, autotexts = axs1[0][0].pie(totali, labels = prod_names, startangle=45, autopct='%1.1f%%')#,pctdistance=1.25, labeldistance=.6) #autopct=absolute_value)
+            axs1[0][0].set_title('ventite totali')
+            # Extract colors from the pie chart wedges
+            colors = [wedge.get_facecolor() for wedge in wedges]
+
+            # barplot 
+            # prod_names = self.impo['prodotto'] 
+            # prod_q = []
+            # for p in prod_names:
+            #     prod_q.append(self.dataset[p].astype(int).sum())
+
+            #df_barplot = pd.DataFrame({'product':prod_names, 'quantity': totali})
+
+            y_pos = np.arange(len(prod_names))
+
+
+            axs1[1][0].axis('off')
+            axs1[1][1].clear()
+            #axs1[1][1] = sns.barplot(df_barplot, y='product', x='quantity', hue='product', orient='h')
+            axs1[1][1].barh(y_pos, totali, tick_label=prod_names, color = colors)
+            axs1[1][1].set_yticks(y_pos, labels=prod_names)
+            axs1[1][1].set_xlabel('quantity')
+            axs1[1][1].set_ylabel('product')
+ 
+            canv1.draw()
+
+
+    def day_charts(self):
+        if (len(self.dataset) > 0):
+
+            axs1 , axs2, axs3 = self.axs_list# = self.axs_list#, axs2, axs3 = self.axs_list
+            canv1, canv2, canv3 = self.canv_list# = self.canv_list#, canv2, canv3 = self.canv_list
+
+            canv1.get_tk_widget().pack_forget()
+            canv3.get_tk_widget().pack_forget()
+            canv2.get_tk_widget().pack(pady=10, padx=10, fill=tk.BOTH)
+
+
+            #get data
+            df = self.dataset.copy()
+            if (df['ts'][0] == '0') or (df['ts'][0] == 0):
+                df = df.drop([0])
+
+            #get dates
+            tformat = "%Y-%m-%d %H:%M:%S.%f"
+            tformat2 = "%d/%m/%y"
+            date = [datetime.strptime(t, tformat).strftime(tformat2)  for t in df['ts']]
+            df['date'] = date
+
+            #get totals
+            prod_names = self.impo['prodotto']
+            prod_totals = np.array(df[prod_names].sum(axis=1))
+            
+
+
+            date_u = np.unique(date)
+            ricavi = []
+            sconti = []
+            n_ordini = []
+            n_vendite = []
+
+            
+            for d in date_u:
+                ricavi.append(df['prezzo'][df['date']==d].astype(float).sum())
+                sconti.append(df['sconto'][df['date']==d].astype(float).sum())
+                n_ordini.append(np.array(df['date']==d).astype(int).sum())
+                n_vendite.append(np.array(prod_totals[df['date']==d]).astype(int).sum())
+
+            #df_barplot = pd.DataFrame({'date': unici, 'revenue': ricavi})
+
+            axs2[1][0].axis('off')
+
+            axs2[1][1].clear()
+            axs2[1][1].bar(date_u, ricavi) #= sns.barplot(df_barplot, y='date', x='revenue', orient='v')
+            axs2[1][1].set_title('ricavi per giorni')
+            axs2[1][1].set_xlabel('date')
+            axs2[1][1].set_ylabel('revenue')
+
+
+            axs2[0][0].clear()
+            axs2[0][0].axis('off')
+            axs2[0][0].pie(ricavi, labels = date_u, startangle=45, autopct='%1.1f%%')
+            axs2[0][0].set_title('% ricavi per giorni')
+
+
+            date_u = date_u.tolist()
+            s_ricavi = np.array(ricavi).sum()
+            m_ricavi = np.round(np.array(ricavi).mean(), 2)
+            ricavi.append(s_ricavi)
+            ricavi.append(m_ricavi)
+            s_sconti = np.array(sconti).sum()
+            m_sconti = np.round(np.array(sconti).mean(), 2)
+            sconti.append(s_sconti)
+            sconti.append(m_sconti)       
+            s_n_vendite = np.array(n_vendite).astype(int).sum()
+            m_n_vendite = np.round(np.array(n_vendite).astype(int).mean(), 2)
+            n_vendite.append(s_n_vendite)
+            n_vendite.append(m_n_vendite)                      
+            s_n_ordini = np.array(n_ordini).sum()
+            m_n_ordini = np.round(np.array(n_ordini).mean(), 2)
+            n_ordini.append(s_n_ordini)
+            n_ordini.append(m_n_ordini)         
+
+            date_u.append('TOT')
+            date_u.append('MEAN')
+
+            tab = pd.DataFrame({'ricavi': ricavi, 'sconti': sconti, 'n_ordini': n_ordini, 'n_vendite': n_vendite})
+            tab.index = date_u
+
+            axs2[0][1].clear()
+            axs2[0][1].axis('off')
+            axs2[0][1].table(cellText = tab.values, rowLabels = tab.index, colLabels=tab.columns, loc ='center')
+
+
+            canv2.draw()
+
 
     def pie_chart(self):
 
@@ -829,7 +1049,6 @@ class SalesManager:
             # self.axs[1].set_title('totali per giorno')  #questo titolo si sovrappone alla tabella
 
 
-
     def barplot_chart(self):
         # barplot
         
@@ -854,9 +1073,6 @@ class SalesManager:
             # self.axs[0][2].set_yticks(y_pos, labels=prod_names)
             # self.axs[0][2].set_xlabel('quantity')
             # self.axs[0][2].set_ylabel('product')
-
-            
-
 
 
     def info_chart2(self):
@@ -959,20 +1175,30 @@ class SalesManager:
     def plotta(self):
         #self.hideshowplot(True)
         self.show_frame('plot')
-
         self.build_report()
+        self.call_plot(self.plot_id.get())
 
-        self.info_chart2()
-        
-        self.pie_chart()
-        self.table_chart()
-        self.barplot_chart()
-        
-        self.axs[0][1].axis('off')
-        self.axs[1][1].axis('off')
-        self.axs[2][1].axis('off')
 
-        self.canvas.draw()
+
+        #old good work
+        # self.build_report()
+        # self.info_chart2()
+        # self.pie_chart()
+        # self.table_chart()
+        # self.barplot_chart()
+        
+        # self.axs[0][1].axis('off')
+        # self.axs[1][1].axis('off')
+        # self.axs[2][1].axis('off')
+
+
+        #new work
+        #self.build_report()
+        #self.prod_charts()
+        #self.day_charts()
+
+        
+        #self.canvas.draw()
 
 
 
