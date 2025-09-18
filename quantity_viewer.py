@@ -52,6 +52,9 @@ class QuantityViewer:
         time_lab = datetime.now().strftime(self.time_format)
 
         #retrieve last id
+        #cli = np.array(self.dataset['cliente'])
+        #last_id = cli[len(cli)-1]
+        self.dataset = self.dataset.reset_index()
         last_id = self.dataset['cliente'][self.dataset.shape[0]-1]
 
         #update head
@@ -114,6 +117,7 @@ class QuantityViewer:
         time_lab = datetime.now().strftime(self.time_format)
 
         #retrieve last id
+        self.dataset = self.dataset.reset_index()
         last_id = self.dataset['cliente'][self.dataset.shape[0]-1]
 
         #update head

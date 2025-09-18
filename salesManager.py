@@ -728,7 +728,7 @@ class SalesManager:
         self.report_labs = price_lab, dis_lab
 
 
-        self.fig, self.axs = plt.subplots(3, 3, figsize=(13, 9))
+        self.fig, self.axs = plt.subplots(3, 3, figsize=(15, 12))
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.plot_frame)
         self.canvas.draw()
         self.canvas.get_tk_widget().pack(pady=10, padx=10, fill=tk.BOTH)
@@ -739,9 +739,14 @@ class SalesManager:
     def build_report(self):
         tot_price = self.dataset['prezzo'].astype(float).sum()
         tot_dis = self.dataset['sconto'].astype(float).sum()
-        
+        tot_quantity = self.dataset[self.impo['prodotto']].astype(int).sum(axis=1).sum()
+        tot_orders = np.array(self.dataset['prezzo'].astype(float) > 0).astype(int).sum()
+
         price_lab, dis_lab = self.report_labs
-        price_lab.config(text = 'RICAVI: '+ str(tot_price) + '€' + '\n' + 'SCONTI: '+str(tot_dis) + '€')
+        price_lab.config(text = 'RICAVI: '+ str(tot_price) + '€' + '\n' 
+                         + 'SCONTI: '+str(tot_dis) + '€' + '\n' 
+                         + '#CLIENTI: ' + str(tot_orders)+ '\n'
+                         + '#VENDUTO: ' + str(tot_quantity)  )
 
     def pie_chart(self):
 
@@ -758,7 +763,7 @@ class SalesManager:
         if (len(self.dataset) > 2):
 
             df1 = self.dataset[self.impo['prodotto']]
-            totali = [df1[prod].sum() for prod in self.impo['prodotto']]
+            totali = [df1[prod].astype(int).sum() for prod in self.impo['prodotto']]
 
             self.axs[0][0].clear()
             self.axs[0][0].pie(totali, labels = self.impo['prodotto'], startangle=45, autopct='%1.1f%%')#,pctdistance=1.25, labeldistance=.6) #autopct=absolute_value)
@@ -780,8 +785,8 @@ class SalesManager:
         #self.axs[0][1].clear()
         if (len(self.dataset) > 0):
             
-            df = self.dataset
-            if (df['ts'][0] == '0'):
+            df = self.dataset.copy()
+            if (df['ts'][0] == '0') or (df['ts'][0] == 0):
                df = df.drop([0])
 
             #filter data by today 
@@ -816,7 +821,7 @@ class SalesManager:
             self.axs[1][0].clear()
             self.axs[1][0].axis('off')
             self.axs[1][0].table(cellText = pivoTab.values, rowLabels = pivoTab.index, colLabels=pivoTab.columns, loc ='center')
-            self.axs[1][0].set_title('totali per giorno')  #questo titolo si sovrappone alla tabella
+            #self.axs[1][0].set_title('totali per giorno')  #questo titolo si sovrappone alla tabella
 
             # self.axs[1].clear()
             # self.axs[1].axis('off')
@@ -854,31 +859,45 @@ class SalesManager:
 
 
 
-    def barplot_chart2(self):
+    def info_chart2(self):
         # barplot
         
         if (len(self.dataset) > 0):
 
-            df = self.dataset
-            if (df['ts'][0] == '0'):
+            #get data
+            df = self.dataset.copy()
+            if (df['ts'][0] == '0') or (df['ts'][0] == 0):
                 df = df.drop([0])
 
+            #get dates
             tformat = "%Y-%m-%d %H:%M:%S.%f"
             tformat2 = "%d/%m/%y"
             date = [datetime.strptime(t, tformat).strftime(tformat2)  for t in df['ts']]
             df['date'] = date
 
-            unici = np.unique(date)
-            ricavi = []
+            #get totals
+            prod_names = self.impo['prodotto']
+            prod_totals = np.array(df[prod_names].sum(axis=1))
             
-            for d in unici:
-                ricavi.append(df['prezzo'][df['date']==d].astype(float).sum())
 
+
+            date_u = np.unique(date)
+            ricavi = []
+            sconti = []
+            n_ordini = []
+            n_vendite = []
+
+            
+            for d in date_u:
+                ricavi.append(df['prezzo'][df['date']==d].astype(float).sum())
+                sconti.append(df['sconto'][df['date']==d].astype(float).sum())
+                n_ordini.append(np.array(df['date']==d).astype(int).sum())
+                n_vendite.append(np.array(prod_totals[df['date']==d]).astype(int).sum())
 
             #df_barplot = pd.DataFrame({'date': unici, 'revenue': ricavi})
 
             self.axs[2][0].clear()
-            self.axs[2][0].bar(unici, ricavi) #= sns.barplot(df_barplot, y='date', x='revenue', orient='v')
+            self.axs[2][0].bar(date_u, ricavi) #= sns.barplot(df_barplot, y='date', x='revenue', orient='v')
             self.axs[2][0].set_title('ricavi per giorni')
             self.axs[2][0].set_xlabel('date')
             self.axs[2][0].set_ylabel('revenue')
@@ -892,7 +911,7 @@ class SalesManager:
 
             self.axs[0][2].clear()
             self.axs[0][2].axis('off')
-            self.axs[0][2].pie(ricavi, labels = unici, startangle=45, autopct='%1.1f%%')
+            self.axs[0][2].pie(ricavi, labels = date_u, startangle=45, autopct='%1.1f%%')
             self.axs[0][2].set_title('% ricavi per giorni')
 
             # self.axs[2].clear()
@@ -902,12 +921,30 @@ class SalesManager:
 
 
 
-            unici = unici.tolist()
-            unici.append('TOT')
-            ricavi.append(np.array(ricavi).sum())
+            date_u = date_u.tolist()
+            s_ricavi = np.array(ricavi).sum()
+            m_ricavi = np.round(np.array(ricavi).mean(), 2)
+            ricavi.append(s_ricavi)
+            ricavi.append(m_ricavi)
+            s_sconti = np.array(sconti).sum()
+            m_sconti = np.round(np.array(sconti).mean(), 2)
+            sconti.append(s_sconti)
+            sconti.append(m_sconti)       
+            s_n_vendite = np.array(n_vendite).astype(int).sum()
+            m_n_vendite = np.round(np.array(n_vendite).astype(int).mean(), 2)
+            n_vendite.append(s_n_vendite)
+            n_vendite.append(m_n_vendite)                      
+            s_n_ordini = np.array(n_ordini).sum()
+            m_n_ordini = np.round(np.array(n_ordini).mean(), 2)
+            n_ordini.append(s_n_ordini)
+            n_ordini.append(m_n_ordini)         
 
-            tab = pd.DataFrame({'ricavi': ricavi})
-            tab.index = unici
+
+            date_u.append('TOT')
+            date_u.append('MEAN')
+
+            tab = pd.DataFrame({'ricavi': ricavi, 'sconti': sconti, 'n_ordini': n_ordini, 'n_vendite': n_vendite})
+            tab.index = date_u
 
             self.axs[1][2].clear()
             self.axs[1][2].axis('off')
@@ -925,7 +962,7 @@ class SalesManager:
 
         self.build_report()
 
-        self.barplot_chart2()
+        self.info_chart2()
         
         self.pie_chart()
         self.table_chart()
