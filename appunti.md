@@ -1,4 +1,4 @@
-##pyenv con venv
+## pyenv con venv
 
 Prima di creare l'ambiente virtuale di python bisogna decidere quale versione di python si vuole utilizzare
 
