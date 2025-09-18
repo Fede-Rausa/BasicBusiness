@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from help import testoHelp
 from datetime import datetime
-import seaborn as sns
+# import seaborn as sns
 
 class SalesManager:
 
@@ -446,16 +446,6 @@ class SalesManager:
                 win32print.ClosePrinter(hprinter)
         except Exception as e:
             print(f"Errore di stampa: {e}")
-
-
-    logo = '''
-
-
-
-
-
-        '''
-
 
 
 
@@ -1136,8 +1126,8 @@ class SalesManager:
 
             y_pos = np.arange(len(prod_names))
 
-            self.axs[2][2].clear()
-            self.axs[2][2] = sns.barplot(df_barplot, y='product', x='quantity', hue='product', orient='h')
+            # self.axs[2][2].clear()
+            # self.axs[2][2] = sns.barplot(df_barplot, y='product', x='quantity', hue='product', orient='h')
 
             # self.axs[2].clear()
             # self.axs[2] = sns.barplot(df_barplot, y='product', x='quantity', hue='product', orient='h')
