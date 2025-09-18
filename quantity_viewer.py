@@ -27,7 +27,11 @@ class QuantityViewer:
 
 
     def importa_dati(self):
-        self.dataset = pd.read_csv(self.path_dataset, sep=';', decimal=',')
+        #old safe way
+        #self.dataset = pd.read_csv(self.path_dataset, sep=';', decimal=',')
+        #new fast way
+        self.dataset = self.parent.SM.dataset.copy()
+        
         #filter data by today 
         tformat = "%Y-%m-%d %H:%M:%S.%f"   #2025-09-17 14:39:40.405671
         #self.dataset = self.dataset[self.dataset['ts'] != '0']
@@ -40,12 +44,14 @@ class QuantityViewer:
 
     def load_impo(self):
         #self.impo = pd.read_csv(self.path_impo, sep=';', decimal=',')  #buuuug: the products have to be ordered by categories !?
-        self.impo = pd.read_csv(self.path_impo, sep=';', decimal=',')   
+        #self.impo = pd.read_csv(self.path_impo, sep=';', decimal=',')   
         # Ordina per categoria ogni volta che leggi il file  #new buuug: something blocks the update
-        # ordine_categoria = ['P', 'C', 'B']
+        # ordine_categoria = ['P', 'C', 'B'] 
         # self.impo['categoria'] = pd.Categorical(self.impo['categoria'], categories=ordine_categoria, ordered=True)
         # self.impo = self.impo.sort_values('categoria').reset_index(drop=True)
-
+        
+        #faster way
+        self.impo = self.parent.SM.impo
 
 
     def setupUi(self):
@@ -103,7 +109,8 @@ class QuantityViewer:
         for p in prod_names:
             sums = []
             for o in self.opts:
-                sums.append(self.dataset[p][status==o].sum())
+                #sums.append(self.dataset[p][status==o].sum()) #causa del bug del blocco dell'ordine
+                sums.append(self.dataset[p][status==o].astype(int).sum())  #trovato il bug del blocco
             tot = sum(sums)
             row = [p] + sums + [tot]
             rows.append(row)

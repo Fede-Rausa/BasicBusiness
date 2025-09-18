@@ -160,8 +160,8 @@ class SalesManager:
         self.cassa_frame = tk.Frame(self.root)
         self.cassa_frame.pack(expand=True, pady=5, padx=5)  
         #NB: I frame vanno posizionati solo DOPO l'assegnazione        
-        catTag = ['P', 'C', 'B']
-        catName = ['Panini', 'Contorni', 'Bibite']
+        catTag = ['P', 'C', 'B'] # self.cats
+        catName = ['Panini', 'Contorni', 'Bibite'] #self.cats
 
         self.sbListQ = []
         self.sbListS = []
@@ -550,7 +550,7 @@ class SalesManager:
             df.loc[i] = [prod, prezzo, cat]
 
         # Ordina il DataFrame per categoria P, C, B
-        ordine_categoria = ['P', 'C', 'B']
+        ordine_categoria = ['P', 'C', 'B']  #self.cats
         df['categoria'] = pd.Categorical(df['categoria'], categories=ordine_categoria, ordered=True)
         df = df.sort_values('categoria').reset_index(drop=True)
 
@@ -583,7 +583,9 @@ class SalesManager:
                 sv = self.parent.svlist[i]
                 try:
                     sv.gen_rows()
-                except:
+                except Exception as e:
+                    print('errore in call_gen_rows')
+                    print(e)
                     pop_ids.append(i)
 
                 #if (sv is not None):
@@ -599,7 +601,9 @@ class SalesManager:
                 qv = self.parent.qvlist[i]
                 try:
                     qv.gen_rows()
-                except:
+                except Exception as e:
+                    print('errore in call_gen_rows2')
+                    print(e)
                     pop_ids.append(i)       
 
             for i in pop_ids:
@@ -1416,7 +1420,6 @@ class SalesManager:
 
         scontiControl = tk.Frame(sconti_frame)
         scontiControl.pack(side = tk.TOP)
-
 
         self.scontiCatForm = tk.Frame(sconti_frame)
         self.scontiCatForm.pack(side = tk.LEFT)
