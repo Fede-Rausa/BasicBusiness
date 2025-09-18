@@ -448,6 +448,15 @@ class SalesManager:
             print(f"Errore di stampa: {e}")
 
 
+    logo = '''
+
+
+
+
+
+        '''
+
+
 
 
 
