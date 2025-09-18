@@ -63,6 +63,7 @@ class SalesViewer:
             print("Error deleting items from listbox, it may not be initialized yet.")
             return 
 
+        # control font of panel text
         self.lista_righe.config(font=('Calibri', int(self.parent.SM.spinfont.get())))
 
         #mystatus = self.selezione.get()

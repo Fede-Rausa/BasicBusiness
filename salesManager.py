@@ -8,6 +8,8 @@ import os
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from help import testoHelp
+from datetime import datetime
+import seaborn as sns
 
 class SalesManager:
 
@@ -76,6 +78,13 @@ class SalesManager:
         if (os.path.exists(self.path_dataset)):
             self.dataset = pd.read_csv(self.path_dataset, sep=';', decimal=',')
             print('dati trovati')
+            # if (len(self.dataset) > 2):           #problema della rimozione della prima riga di 0
+            #     if (self.dataset['ts'][0] == '0'):
+            #         self.dataset = self.dataset.drop([0])
+            #         print([i for i in self.dataset.index])
+            #         self.dataset = self.dataset.reset_index()
+            #         print([i for i in self.dataset.index])
+            #         print(len(self.dataset))
         else:
             print('dati non trovati, dati generati')
             self.creaDati()
@@ -91,6 +100,7 @@ class SalesManager:
         df.loc[len(df)] = newrow.tolist()
         df.to_csv(self.path_dataset, sep=';', index=False, decimal=',')
         self.parent.update_sv()      #ricarica i sales viewer
+        self.parent.update_qv()      #ricarica i quantity viewer
 
     def aggiornaDati0(self):
         df = self.dataset
@@ -213,10 +223,16 @@ class SalesManager:
         ##AREE UI per fattura, note e resto        
         conti_frame = tk.Frame(self.cassa_frame, bd=2, relief="groove")
         conti_frame.grid(row=1, column=1)
-        note_frame = tk.Frame(self.cassa_frame)
+        note_frame = tk.Frame(self.cassa_frame, bd=2, relief="groove")
         note_frame.grid(row=1, column=2)
-        resto_frame =tk.Frame(self.cassa_frame)
-        resto_frame.grid(row=1, column=0)
+
+        resto_e_sconti_frame = tk.Frame(self.cassa_frame)
+        resto_e_sconti_frame.grid(row=1, column=0)
+
+        resto_frame = tk.Frame(resto_e_sconti_frame, bd=2, relief="groove", pady = 5, padx=5 )
+        resto_frame.grid(row=0, column=0)
+        sconti_frame = tk.Frame(resto_e_sconti_frame, bd=2, relief="groove", pady = 5, padx=5 )
+        sconti_frame.grid(row=1, column=0)
 
         ##RESTO UI
         tk.Label(resto_frame, text='CONSEGNA', font=("Arial", 14)).grid(row=1, column=0)
@@ -227,7 +243,7 @@ class SalesManager:
         self.valore_consegna = tk.Spinbox(resto_frame, text='20', increment=0.01, from_=0, to=99, width=5, 
         command=self.calcola_resto, font=("Arial", 12))
         self.valore_consegna.grid(row=1, column=1)
-        tk.Button(resto_frame, text='calcola resto', command=self.calcola_resto, font=("Arial", 14)).grid(row=3, column=1)
+        tk.Button(resto_frame, text='calcola resto', command=self.calcola_resto, font=("Arial", 14)).grid(row=3, column=1, pady=10)
 
 
         ##SCONTO COPPIE DI CATEGORIE UI
@@ -238,24 +254,25 @@ class SalesManager:
             sconti.to_csv(self.path_sconti, sep=';', index=False, decimal=',')
 
 
-        tk.Label(resto_frame, text='', font = ("Arial",10)).grid(row=4, column=0)
-        tk.Label(resto_frame, text="sconto P+C", font = ("Arial",10)).grid(row=5, column=0)
-        tk.Label(resto_frame, text="sconto P+B", font = ("Arial",10)).grid(row=6, column=0)
-        tk.Label(resto_frame, text="sconto C+B", font = ("Arial",10)).grid(row=7, column=0)
-        self.scontoPC = tk.Spinbox(resto_frame, increment=0.01, from_=0, to=99, width=5, command=self.on_spinbox_change)
+        tk.Label(sconti_frame, text='IMPOSTA SCONTI', font = ("Arial",14)).grid(row=3, column=0)
+        tk.Label(sconti_frame, text='', font = ("Arial",10)).grid(row=4, column=0)
+        tk.Label(sconti_frame, text="sconto P+C", font = ("Arial",10)).grid(row=5, column=0)
+        tk.Label(sconti_frame, text="sconto P+B", font = ("Arial",10)).grid(row=6, column=0)
+        tk.Label(sconti_frame, text="sconto C+B", font = ("Arial",10)).grid(row=7, column=0)
+        self.scontoPC = tk.Spinbox(sconti_frame, increment=0.01, from_=0, to=99, width=5, command=self.on_spinbox_change)
         self.scontoPC.grid(row=5, column=1)
-        self.scontoPB = tk.Spinbox(resto_frame, increment=0.01, from_=0, to=99, width=5, command=self.on_spinbox_change)
+        self.scontoPB = tk.Spinbox(sconti_frame, increment=0.01, from_=0, to=99, width=5, command=self.on_spinbox_change)
         self.scontoPB.grid(row=6, column=1)
-        self.scontoCB = tk.Spinbox(resto_frame, increment=0.01, from_=0, to=99, width=5, command=self.on_spinbox_change)
+        self.scontoCB = tk.Spinbox(sconti_frame, increment=0.01, from_=0, to=99, width=5, command=self.on_spinbox_change)
         self.scontoCB.grid(row=7, column=1)
-        self.scontoPCT = tk.StringVar(resto_frame, "0")
-        tk.Label(resto_frame, textvariable= self.scontoPCT, font = ("Arial",10)).grid(row=5, column=2)
-        self.scontoPBT = tk.StringVar(resto_frame, "0")
-        tk.Label(resto_frame, textvariable= self.scontoPBT, font = ("Arial",10)).grid(row=6, column=2)
-        self.scontoCBT = tk.StringVar(resto_frame, "0")
-        tk.Label(resto_frame, textvariable= self.scontoCBT, font = ("Arial",10)).grid(row=7, column=2)
+        self.scontoPCT = tk.StringVar(sconti_frame, "0")
+        tk.Label(sconti_frame, textvariable= self.scontoPCT, font = ("Arial",10)).grid(row=5, column=2)
+        self.scontoPBT = tk.StringVar(sconti_frame, "0")
+        tk.Label(sconti_frame, textvariable= self.scontoPBT, font = ("Arial",10)).grid(row=6, column=2)
+        self.scontoCBT = tk.StringVar(sconti_frame, "0")
+        tk.Label(sconti_frame, textvariable= self.scontoCBT, font = ("Arial",10)).grid(row=7, column=2)
 
-        tk.Button(resto_frame, text='salva sconti', command=salvasconti,
+        tk.Button(sconti_frame, text='salva sconti', command=salvasconti,
                  font=("Arial", 14)).grid(row=8, column=1)
 
 
@@ -576,6 +593,18 @@ class SalesManager:
             for i in pop_ids:
                 self.parent.svlist.pop(i)
 
+        def call_gen_rows2():
+            pop_ids = []
+            for i in range(len(self.parent.qvlist)):  
+                qv = self.parent.qvlist[i]
+                try:
+                    qv.gen_rows()
+                except:
+                    pop_ids.append(i)       
+
+            for i in pop_ids:
+                self.parent.qvlist.pop(i)               
+
                 
 
         #filtra per tipo di ordine
@@ -603,6 +632,25 @@ class SalesManager:
                     font=('Calibri', '12', 'bold')).pack(side=tk.LEFT, padx=10)
         
 
+        qpanelopt_frame = tk.Frame(self.opt_frame)
+        qpanelopt_frame.pack(pady=10, padx=10, side=tk.TOP)
+
+        tk.Label(qpanelopt_frame, text='Regola Font:', font=('Calibri', '12', 'bold')).pack(side=tk.LEFT, padx=10) # display selected
+
+        self.spinfont2 = tk.Spinbox(qpanelopt_frame, from_=5, to=50, increment=1, 
+                                font=('Calibri', '12', 'bold'), width=5, 
+                                repeatinterval=100, repeatdelay=500,
+                                command = call_gen_rows2)
+        
+        self.spinfont2.pack(side=tk.LEFT)
+        self.spinfont2.delete(0, tk.END)
+        self.spinfont2.insert(0, "16")
+
+
+        tk.Button(qpanelopt_frame, text='open quantity viewer', 
+                command = self.apri_quantitypanel,
+                font=('Calibri', '12', 'bold')).pack(side=tk.LEFT, padx=10)
+        
         tk.Button(self.opt_frame, text='open cost analyzer', 
                     command = self.apri_costi,
                     font=('Calibri', '12', 'bold')).pack(side=tk.TOP, padx=10, pady=10)
@@ -612,6 +660,13 @@ class SalesManager:
                     font=('Calibri', '12', 'bold')).pack(side=tk.TOP, padx=10, pady=10)
 
 
+
+    def apri_quantitypanel(self):
+        parent = self.parent
+        windowB = tk.Toplevel(self.root)
+        parent.qvlist.append(parent.QuantityViewer(parent, windowB))
+        for qv in parent.qvlist:
+            qv.update()
     
     def apri_panel(self):
         parent = self.parent
@@ -622,15 +677,17 @@ class SalesManager:
             sv.update()
         #parent.SV.update()
 
-    def apri_finance(self):
-        parent = self.parent
-        windowB = tk.Toplevel(self.root)
-        parent.FM = parent.FinanceManager(parent, windowB)
 
     def apri_costi(self):
         parent = self.parent
         windowB = tk.Toplevel(self.root)
         parent.FM = parent.CostManager(parent, windowB)
+
+
+    def apri_finance(self):
+        parent = self.parent
+        windowB = tk.Toplevel(self.root)
+        parent.FM = parent.FinanceManager(parent, windowB)
 
 
     def setupHelp(self):
@@ -722,84 +779,487 @@ class SalesManager:
         self.plot_frame = tk.Frame(self.root, bd=2, relief="groove")
         self.plot_frame.pack(expand=True, pady=5, padx=5, fill=tk.BOTH) 
 
-        self.fig, self.axs = plt.subplots(1, 2, figsize=(12, 4))
-        self.canvas = FigureCanvasTkAgg(self.fig, master=self.plot_frame)
-        self.canvas.draw()
-        self.canvas.get_tk_widget().pack(pady=50, padx=10, fill=tk.BOTH)
+        self.report_frame = tk.Frame(self.plot_frame, bd=2, relief="groove")
+        self.report_frame.pack(side = tk.LEFT)
 
-        ctk.CTkButton(master = self.plot_frame, text="Refresh Plot", command=self.plotta).pack(side=tk.TOP)
+        #old good work
+        # price_lab = tk.Label(self.report_frame, font=('Arial', 14))
+        # price_lab.pack(side=tk.LEFT, pady=10)
+        # dis_lab = tk.Label(self.report_frame)
+        # dis_lab.pack(side=tk.LEFT, pady=10)
+        # self.report_labs = price_lab, dis_lab
+
+        # self.fig, self.axs = plt.subplots(3, 3, figsize=(15, 12))
+        # self.canvas = FigureCanvasTkAgg(self.fig, master=self.plot_frame)
+        # self.canvas.draw()
+        # self.canvas.get_tk_widget().pack(pady=10, padx=10, fill=tk.BOTH)
+
+
+        #new work
+        report_lab = tk.Label(self.report_frame, font=('Arial', 14))
+        report_lab.pack(side=tk.TOP, pady=10)
+        
+        self.plot_id = ctk.StringVar(value="prod_sales")
+        report_dd = ctk.CTkComboBox(self.report_frame, values=["prod_sales", "day_revenue"],
+                                            command=self.call_plot, variable=self.plot_id)
+        
+        self.plot_id.set("prod_sales")
+        report_dd.pack(side=tk.TOP, pady=10)
+
+
+        self.report_labs = report_lab
+
+        fig1 , axs1 = plt.subplots(2, 2, figsize=(15, 12))
+        fig2, axs2 = plt.subplots(2,2, figsize=(15,12))
+        fig3, axs3 = plt.subplots(1,1, figsize=(15,12))
+        canv1 = FigureCanvasTkAgg(fig1, master=self.plot_frame)
+        canv1.draw()
+        canv1.get_tk_widget().pack(pady=10, padx=10, fill=tk.BOTH)
+        canv2 = FigureCanvasTkAgg(fig2, master=self.plot_frame)
+        canv2.draw()
+        canv2.get_tk_widget().pack(pady=10, padx=10, fill=tk.BOTH)
+        canv3 = FigureCanvasTkAgg(fig3, master=self.plot_frame)
+        canv3.draw()
+        canv3.get_tk_widget().pack(pady=10, padx=10, fill=tk.BOTH)
+
+        self.axs_list = axs1, axs2, axs3
+        self.canv_list = canv1, canv2, canv3
+        
+
+    def call_plot(self, plot_id):
+        if plot_id == 'prod_sales':
+            self.prod_charts()
+        
+        if plot_id == 'day_revenue':
+            self.day_charts()
+
+
+        #ctk.CTkButton(master = self.plot_frame, text="Refresh Plot", command=self.plotta).pack(side=tk.TOP)
         #self.hideshowplot(False)
 
+    def build_report(self):
+        tot_price = self.dataset['prezzo'].astype(float).sum()
+        tot_dis = self.dataset['sconto'].astype(float).sum()
+        tot_quantity = self.dataset[self.impo['prodotto']].astype(int).sum(axis=1).sum()
+        tot_orders = np.array(self.dataset['prezzo'].astype(float) > 0).astype(int).sum()
 
-    def plotta(self):
-        #self.hideshowplot(True)
-        self.show_frame('plot')
+        report_lab = self.report_labs
+        report_lab.config(text = 'RICAVI: '+ str(tot_price) + '€' + '\n' 
+                         + 'SCONTI: '+str(tot_dis) + '€' + '\n' 
+                         + '#CLIENTI: ' + str(tot_orders)+ '\n'
+                         + '#VENDUTO: ' + str(tot_quantity)  )
 
-        # data for plotting
-        colonne = list(self.impo['prodotto']) + ['sconto', 'prezzo']
-        for c in colonne:
-            self.dataset[c] = pd.to_numeric(self.dataset[c])
+    def prod_charts(self):
 
-        # Pie
-        self.axs[0].clear()
+        axs1 , axs2, axs3 = self.axs_list# = self.axs_list#, axs2, axs3 = self.axs_list
+        canv1, canv2, canv3 = self.canv_list# = self.canv_list#, canv2, canv3 = self.canv_list
+
+        canv2.get_tk_widget().pack_forget()
+        canv3.get_tk_widget().pack_forget()
+        canv1.get_tk_widget().pack(pady=10, padx=10, fill=tk.BOTH)
+
         if (len(self.dataset) > 2):
 
-            df1 = self.dataset[self.impo['prodotto']]
-            totali = [df1[prod].sum() for prod in self.impo['prodotto']]
+            colonne = list(self.impo['prodotto']) #+ ['sconto', 'prezzo']
+            for c in colonne:
+                self.dataset[c] = pd.to_numeric(self.dataset[c])
 
-            self.axs[0].pie(totali, labels = self.impo['prodotto'], startangle=45, autopct='%1.1f%%')#,pctdistance=1.25, labeldistance=.6) #autopct=absolute_value)
-            self.axs[0].set_title('ventite totali')
 
-        # Pivot
-        self.axs[1].clear()
-        if (len(self.dataset) > 0):
-            pivoTab = self.dataset.pivot_table(index = 'giorno', 
+            df = self.dataset.copy()
+            if (df['ts'][0] == '0') or (df['ts'][0] == 0):
+               df = df.drop([0])
+
+            #filter data by today 
+            tformat = "%Y-%m-%d %H:%M:%S.%f"   #2025-09-17 14:39:40.405671
+            ts = [datetime.strptime(s, tformat).date() for s in  df['ts']]
+            df['date'] = ts
+
+            # df['date'] = self.dataset['ts']
+
+            pivoTab = df.pivot_table(index = 'date', 
                                             values = colonne,
                                             aggfunc='sum',
                                             sort=False).T
 
-            ####totali panini
-            nomi = np.array(self.impo['prodotto'])[self.impo['categoria']=='P'].tolist()
-            pivoTab_p = self.dataset.pivot_table(index = 'giorno', 
-                                            values = nomi,
-                                            aggfunc='sum',
-                                            sort=False).T
-            newrow = pivoTab_p.sum(axis=0)
-            newrow.name = 'totPanini'
-            pivoTab = pd.concat([pivoTab, newrow.to_frame().T])
+            for c in self.cats:
+                nomi = np.array(self.impo['prodotto'])[self.impo['categoria']==c].tolist()
+                pivoTab_p = df.pivot_table(index = 'date', 
+                                                values = nomi,
+                                                aggfunc='sum',
+                                                sort=False).T
+                newrow = pivoTab_p.sum(axis=0)
+                newrow.name = 'tot' + c
+                pivoTab = pd.concat([pivoTab, newrow.to_frame().T])
 
-            ####totali contorni
-            nomi = np.array(self.impo['prodotto'])[self.impo['categoria']=='C'].tolist()
-            pivoTab_p = self.dataset.pivot_table(index = 'giorno', 
-                                            values = nomi,
-                                            aggfunc='sum',
-                                            sort=False).T
-            newrow = pivoTab_p.sum(axis=0)
-            newrow.name = 'totContorni'
-            pivoTab = pd.concat([pivoTab, newrow.to_frame().T])
-
-            ####totali bibite
-            nomi = np.array(self.impo['prodotto'])[self.impo['categoria']=='B'].tolist()
-            pivoTab_p = self.dataset.pivot_table(index = 'giorno', 
-                                            values = nomi,
-                                            aggfunc='sum',
-                                            sort=False).T
-            newrow = pivoTab_p.sum(axis=0)
-            newrow.name = 'totBibite'
-            pivoTab = pd.concat([pivoTab, newrow.to_frame().T])
-
-            ####totale in settimana di ogni voce
-            pivoTab = pivoTab.assign(TOT=pivoTab.sum(axis=1))
+            ####totale di ogni voce
+            pivoTab = pivoTab.assign(TOT = pivoTab.sum(axis=1))
             
             #####creazione tabella
             for c in pivoTab.columns:
                     pivoTab[c] = pivoTab[c].astype(int)
 
-            self.axs[1].axis('off')
-            self.axs[1].table(cellText = pivoTab.values, rowLabels = pivoTab.index, colLabels=pivoTab.columns, loc ='center')
-            #self.axs[1].set_title('totali per giorno')  #questo titolo si sovrappone alla tabella
+            axs1[0][1].clear()
+            axs1[0][1].axis('off')
+            axs1[0][1].table(cellText = pivoTab.values, rowLabels = pivoTab.index, colLabels=pivoTab.columns, loc ='center')
 
-        self.canvas.draw()
+
+            #pie chart
+
+            #df1 = self.dataset[self.impo['prodotto']]
+            #totali = [df1[prod].astype(int).sum() for prod in self.impo['prodotto']]
+            prod_names = self.impo['prodotto']
+            totali = pivoTab['TOT'][prod_names]
+
+
+            axs1[0][0].clear()
+            wedges, texts, autotexts = axs1[0][0].pie(totali, labels = prod_names, startangle=45, autopct='%1.1f%%')#,pctdistance=1.25, labeldistance=.6) #autopct=absolute_value)
+            axs1[0][0].set_title('ventite totali')
+            # Extract colors from the pie chart wedges
+            colors = [wedge.get_facecolor() for wedge in wedges]
+
+            # barplot 
+            # prod_names = self.impo['prodotto'] 
+            # prod_q = []
+            # for p in prod_names:
+            #     prod_q.append(self.dataset[p].astype(int).sum())
+
+            #df_barplot = pd.DataFrame({'product':prod_names, 'quantity': totali})
+
+            y_pos = np.arange(len(prod_names))
+
+
+            axs1[1][0].axis('off')
+            axs1[1][1].clear()
+            #axs1[1][1] = sns.barplot(df_barplot, y='product', x='quantity', hue='product', orient='h')
+            axs1[1][1].barh(y_pos, totali, tick_label=prod_names, color = colors)
+            axs1[1][1].set_yticks(y_pos, labels=prod_names)
+            axs1[1][1].set_xlabel('quantity')
+            axs1[1][1].set_ylabel('product')
+ 
+            canv1.draw()
+
+
+    def day_charts(self):
+        if (len(self.dataset) > 0):
+
+            axs1 , axs2, axs3 = self.axs_list# = self.axs_list#, axs2, axs3 = self.axs_list
+            canv1, canv2, canv3 = self.canv_list# = self.canv_list#, canv2, canv3 = self.canv_list
+
+            canv1.get_tk_widget().pack_forget()
+            canv3.get_tk_widget().pack_forget()
+            canv2.get_tk_widget().pack(pady=10, padx=10, fill=tk.BOTH)
+
+
+            #get data
+            df = self.dataset.copy()
+            if (df['ts'][0] == '0') or (df['ts'][0] == 0):
+                df = df.drop([0])
+
+            #get dates
+            tformat = "%Y-%m-%d %H:%M:%S.%f"
+            tformat2 = "%d/%m/%y"
+            date = [datetime.strptime(t, tformat).strftime(tformat2)  for t in df['ts']]
+            df['date'] = date
+
+            #get totals
+            prod_names = self.impo['prodotto']
+            prod_totals = np.array(df[prod_names].sum(axis=1))
+            
+
+
+            date_u = np.unique(date)
+            ricavi = []
+            sconti = []
+            n_ordini = []
+            n_vendite = []
+
+            
+            for d in date_u:
+                ricavi.append(df['prezzo'][df['date']==d].astype(float).sum())
+                sconti.append(df['sconto'][df['date']==d].astype(float).sum())
+                n_ordini.append(np.array(df['date']==d).astype(int).sum())
+                n_vendite.append(np.array(prod_totals[df['date']==d]).astype(int).sum())
+
+            #df_barplot = pd.DataFrame({'date': unici, 'revenue': ricavi})
+
+            axs2[1][0].axis('off')
+
+            axs2[1][1].clear()
+            axs2[1][1].bar(date_u, ricavi) #= sns.barplot(df_barplot, y='date', x='revenue', orient='v')
+            axs2[1][1].set_title('ricavi per giorni')
+            axs2[1][1].set_xlabel('date')
+            axs2[1][1].set_ylabel('revenue')
+
+
+            axs2[0][0].clear()
+            axs2[0][0].axis('off')
+            axs2[0][0].pie(ricavi, labels = date_u, startangle=45, autopct='%1.1f%%')
+            axs2[0][0].set_title('% ricavi per giorni')
+
+
+            date_u = date_u.tolist()
+            s_ricavi = np.array(ricavi).sum()
+            m_ricavi = np.round(np.array(ricavi).mean(), 2)
+            ricavi.append(s_ricavi)
+            ricavi.append(m_ricavi)
+            s_sconti = np.array(sconti).sum()
+            m_sconti = np.round(np.array(sconti).mean(), 2)
+            sconti.append(s_sconti)
+            sconti.append(m_sconti)       
+            s_n_vendite = np.array(n_vendite).astype(int).sum()
+            m_n_vendite = np.round(np.array(n_vendite).astype(int).mean(), 2)
+            n_vendite.append(s_n_vendite)
+            n_vendite.append(m_n_vendite)                      
+            s_n_ordini = np.array(n_ordini).sum()
+            m_n_ordini = np.round(np.array(n_ordini).mean(), 2)
+            n_ordini.append(s_n_ordini)
+            n_ordini.append(m_n_ordini)         
+
+            date_u.append('TOT')
+            date_u.append('MEAN')
+
+            tab = pd.DataFrame({'ricavi': ricavi, 'sconti': sconti, 'n_ordini': n_ordini, 'n_vendite': n_vendite})
+            tab.index = date_u
+
+            axs2[0][1].clear()
+            axs2[0][1].axis('off')
+            axs2[0][1].table(cellText = tab.values, rowLabels = tab.index, colLabels=tab.columns, loc ='center')
+
+
+            canv2.draw()
+
+
+    def pie_chart(self):
+
+
+        # Pie
+
+        # self.fig, self.axs = plt.subplots(2, 2, figsize=(13, 9))
+        # self.canvas = FigureCanvasTkAgg(self.fig, master=self.plot_frame)
+        # self.canvas.draw()
+        # self.canvas.get_tk_widget().pack(pady=10, padx=10, fill=tk.BOTH)
+        
+
+        #self.axs[0][0].clear()
+        if (len(self.dataset) > 2):
+
+            df1 = self.dataset[self.impo['prodotto']]
+            totali = [df1[prod].astype(int).sum() for prod in self.impo['prodotto']]
+
+            self.axs[0][0].clear()
+            self.axs[0][0].pie(totali, labels = self.impo['prodotto'], startangle=45, autopct='%1.1f%%')#,pctdistance=1.25, labeldistance=.6) #autopct=absolute_value)
+            self.axs[0][0].set_title('ventite totali')
+
+            # self.axs[0].clear()
+            # self.axs[0].pie(totali, labels = self.impo['prodotto'], startangle=45, autopct='%1.1f%%')#,pctdistance=1.25, labeldistance=.6) #autopct=absolute_value)
+            # self.axs[0].set_title('ventite totali')
+
+
+    def table_chart(self):
+        
+        # data for plotting
+        colonne = list(self.impo['prodotto']) #+ ['sconto', 'prezzo']
+        for c in colonne:
+            self.dataset[c] = pd.to_numeric(self.dataset[c])
+
+        # Pivot
+        #self.axs[0][1].clear()
+        if (len(self.dataset) > 0):
+            
+            df = self.dataset.copy()
+            if (df['ts'][0] == '0') or (df['ts'][0] == 0):
+               df = df.drop([0])
+
+            #filter data by today 
+            tformat = "%Y-%m-%d %H:%M:%S.%f"   #2025-09-17 14:39:40.405671
+            ts = [datetime.strptime(s, tformat).date() for s in  df['ts']]
+            df['date'] = ts
+
+            # df['date'] = self.dataset['ts']
+
+            pivoTab = df.pivot_table(index = 'date', 
+                                            values = colonne,
+                                            aggfunc='sum',
+                                            sort=False).T
+
+            for c in self.cats:
+                nomi = np.array(self.impo['prodotto'])[self.impo['categoria']==c].tolist()
+                pivoTab_p = df.pivot_table(index = 'date', 
+                                                values = nomi,
+                                                aggfunc='sum',
+                                                sort=False).T
+                newrow = pivoTab_p.sum(axis=0)
+                newrow.name = 'tot' + c
+                pivoTab = pd.concat([pivoTab, newrow.to_frame().T])
+
+            ####totale di ogni voce
+            pivoTab = pivoTab.assign(TOT = pivoTab.sum(axis=1))
+            
+            #####creazione tabella
+            for c in pivoTab.columns:
+                    pivoTab[c] = pivoTab[c].astype(int)
+
+            self.axs[1][0].clear()
+            self.axs[1][0].axis('off')
+            self.axs[1][0].table(cellText = pivoTab.values, rowLabels = pivoTab.index, colLabels=pivoTab.columns, loc ='center')
+            #self.axs[1][0].set_title('totali per giorno')  #questo titolo si sovrappone alla tabella
+
+            # self.axs[1].clear()
+            # self.axs[1].axis('off')
+            # self.axs[1].table(cellText = pivoTab.values, rowLabels = pivoTab.index, colLabels=pivoTab.columns, loc ='center')
+            # self.axs[1].set_title('totali per giorno')  #questo titolo si sovrappone alla tabella
+
+
+    def barplot_chart(self):
+        # barplot
+        
+        if (len(self.dataset) > 0):
+            prod_names = self.impo['prodotto'] 
+            prod_q = []
+            for p in prod_names:
+                prod_q.append(self.dataset[p].astype(int).sum())
+
+            df_barplot = pd.DataFrame({'product':prod_names, 'quantity': prod_q})
+
+            y_pos = np.arange(len(prod_names))
+
+            self.axs[2][2].clear()
+            self.axs[2][2] = sns.barplot(df_barplot, y='product', x='quantity', hue='product', orient='h')
+
+            # self.axs[2].clear()
+            # self.axs[2] = sns.barplot(df_barplot, y='product', x='quantity', hue='product', orient='h')
+
+
+            # self.axs[0][2].barh(y_pos, prod_q, tick_label=prod_names)
+            # self.axs[0][2].set_yticks(y_pos, labels=prod_names)
+            # self.axs[0][2].set_xlabel('quantity')
+            # self.axs[0][2].set_ylabel('product')
+
+
+    def info_chart2(self):
+        # barplot
+        
+        if (len(self.dataset) > 0):
+
+            #get data
+            df = self.dataset.copy()
+            if (df['ts'][0] == '0') or (df['ts'][0] == 0):
+                df = df.drop([0])
+
+            #get dates
+            tformat = "%Y-%m-%d %H:%M:%S.%f"
+            tformat2 = "%d/%m/%y"
+            date = [datetime.strptime(t, tformat).strftime(tformat2)  for t in df['ts']]
+            df['date'] = date
+
+            #get totals
+            prod_names = self.impo['prodotto']
+            prod_totals = np.array(df[prod_names].sum(axis=1))
+            
+
+
+            date_u = np.unique(date)
+            ricavi = []
+            sconti = []
+            n_ordini = []
+            n_vendite = []
+
+            
+            for d in date_u:
+                ricavi.append(df['prezzo'][df['date']==d].astype(float).sum())
+                sconti.append(df['sconto'][df['date']==d].astype(float).sum())
+                n_ordini.append(np.array(df['date']==d).astype(int).sum())
+                n_vendite.append(np.array(prod_totals[df['date']==d]).astype(int).sum())
+
+            #df_barplot = pd.DataFrame({'date': unici, 'revenue': ricavi})
+
+            self.axs[2][0].clear()
+            self.axs[2][0].bar(date_u, ricavi) #= sns.barplot(df_barplot, y='date', x='revenue', orient='v')
+            self.axs[2][0].set_title('ricavi per giorni')
+            self.axs[2][0].set_xlabel('date')
+            self.axs[2][0].set_ylabel('revenue')
+
+            # self.axs[0].clear()
+            # self.axs[0].bar(unici, ricavi) #= sns.barplot(df_barplot, y='date', x='revenue', orient='v')
+            # self.axs[0].set_title('ricavi per giorni')
+            # self.axs[0].set_xlabel('date')
+            # self.axs[0].set_ylabel('revenue')
+
+
+            self.axs[0][2].clear()
+            self.axs[0][2].axis('off')
+            self.axs[0][2].pie(ricavi, labels = date_u, startangle=45, autopct='%1.1f%%')
+            self.axs[0][2].set_title('% ricavi per giorni')
+
+            # self.axs[2].clear()
+            # self.axs[2].axis('off')
+            # self.axs[2].pie(ricavi, labels = unici, startangle=45, autopct='%1.1f%%')
+            # self.axs[2].set_title('% ricavi per giorni')
+
+
+
+            date_u = date_u.tolist()
+            s_ricavi = np.array(ricavi).sum()
+            m_ricavi = np.round(np.array(ricavi).mean(), 2)
+            ricavi.append(s_ricavi)
+            ricavi.append(m_ricavi)
+            s_sconti = np.array(sconti).sum()
+            m_sconti = np.round(np.array(sconti).mean(), 2)
+            sconti.append(s_sconti)
+            sconti.append(m_sconti)       
+            s_n_vendite = np.array(n_vendite).astype(int).sum()
+            m_n_vendite = np.round(np.array(n_vendite).astype(int).mean(), 2)
+            n_vendite.append(s_n_vendite)
+            n_vendite.append(m_n_vendite)                      
+            s_n_ordini = np.array(n_ordini).sum()
+            m_n_ordini = np.round(np.array(n_ordini).mean(), 2)
+            n_ordini.append(s_n_ordini)
+            n_ordini.append(m_n_ordini)         
+
+
+            date_u.append('TOT')
+            date_u.append('MEAN')
+
+            tab = pd.DataFrame({'ricavi': ricavi, 'sconti': sconti, 'n_ordini': n_ordini, 'n_vendite': n_vendite})
+            tab.index = date_u
+
+            self.axs[1][2].clear()
+            self.axs[1][2].axis('off')
+            self.axs[1][2].table(cellText = tab.values, rowLabels = tab.index, colLabels=tab.columns, loc ='center')
+
+            # self.axs[1].clear()
+            # self.axs[1].axis('off')
+            # self.axs[1].table(cellText = tab.values, rowLabels = tab.index, colLabels=tab.columns, loc ='center')
+
+
+
+    def plotta(self):
+        #self.hideshowplot(True)
+        self.show_frame('plot')
+        self.build_report()
+        self.call_plot(self.plot_id.get())
+
+
+
+        #old good work
+        # self.build_report()
+        # self.info_chart2()
+        # self.pie_chart()
+        # self.table_chart()
+        # self.barplot_chart()
+        
+        # self.axs[0][1].axis('off')
+        # self.axs[1][1].axis('off')
+        # self.axs[2][1].axis('off')
+
+
+        #new work
+        #self.build_report()
+        #self.prod_charts()
+        #self.day_charts()
+
+        
+        #self.canvas.draw()
 
 
 
@@ -812,6 +1272,25 @@ class SalesManager:
 
         scrollbar = tk.Scrollbar(self.order_frame)    # Creiamo una barra di scorrimento verticale
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+
+        #header control
+        head_command = tk.Frame(self.order_frame)   #crea header
+        head_command.pack(side=tk.TOP)
+
+        tk.Label(head_command, text='Seleziona status di ogni ordine                ', 
+                 font=('Arial', 12)).pack(side=tk.LEFT, padx=20)
+
+        tk.Label(head_command, text='Seleziona status degli ordini selezionati:', 
+                 font=('Arial', 12)).pack(side=tk.LEFT, padx=1)
+        
+        #global dropdown
+        clicked = tk.StringVar()
+        clicked.set('TODO')
+
+        drop = tk.OptionMenu(head_command, clicked, *self.opts,
+        command = lambda sel = clicked : self.change_status_global(sel) )  # Create Dropdown menu 
+        drop.pack(side=tk.LEFT, padx=1)
 
         self.ord_canvas = tk.Canvas(self.order_frame, yscrollcommand=scrollbar.set)  # Creiamo un canvas che conterrà il frame scrollabile
         self.ord_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
@@ -838,10 +1317,11 @@ class SalesManager:
         label_font = ("Arial", 14)
         button_font = ("Arial", 8, "bold")
         row_height = 1  # altezza righe separatrici
+        self.check_list = []
 
         for i in range(len(self.dataset)):
                 i = len(self.dataset) - (i+1)
-
+                
                 str_Nome = self.dataset.loc[i, "cliente"]
 
                 #print(self.dataset.columns) #debug sul dataset
@@ -851,22 +1331,42 @@ class SalesManager:
                 row_frame = tk.Frame(self.scrollable_frame, pady=5)
                 row_frame.pack(fill=tk.X)
 
+                label_nome = tk.Label(row_frame, text=str_Nome, font=label_font)
+                label_nome.pack(side=tk.LEFT, padx=10)
+
+
+                #check box for automatic selection
+                checkVar = tk.IntVar()
+                checkVar.set(0)
+                self.check_list.append(checkVar)
+
+                def read_cv(cv):
+                    print(cv.get())
+
+                checkinput = ctk.CTkCheckBox(row_frame,  text='',  variable=checkVar, 
+                                             onvalue=1, offvalue=0,
+                                             command = lambda cv = checkVar: read_cv(cv))
+                checkinput.pack(side=tk.LEFT, padx=5)                
+
+
+                #dropdown for single selection
                 clicked = tk.StringVar()
                 clicked.set(str_Status)
 
-                label_nome = tk.Label(row_frame, text=str_Nome, font=label_font)
-                label_nome.pack(side=tk.LEFT, padx=10)
                 label_status = tk.Label(row_frame, text=str_Status, textvariable=clicked, font=label_font)
                 label_status.pack(side=tk.LEFT, padx=10)
 
                 #clicked.set(self.opts[0])  # initial menu text 
                 drop = tk.OptionMenu(row_frame, clicked, *self.opts,
-                command = lambda sel=i,id = i: self.change_status(id, sel) )  # Create Dropdown menu 
-                drop.pack(side=tk.LEFT, padx=10) 
+                command = lambda sel = i, id = i: self.change_status(id, sel) )  # Create Dropdown menu 
+                drop.pack(side=tk.LEFT, padx=10)
 
+
+                #day label
                 label_giorno = tk.Label(row_frame, text=str_gg, font=label_font)
                 label_giorno.pack(side=tk.LEFT, padx=10)
 
+                #cancel order button
                 btn = tk.Button(row_frame, text="REMOVE", font=button_font,
                 command=lambda r = i: self.remove_row(r))
                 btn.pack(side=tk.LEFT, padx=200)
@@ -881,10 +1381,22 @@ class SalesManager:
         self.aggiornaDati0()
         #print(self.dati)
         self.parent.update_sv()
+        self.parent.update_qv()
         self.fill_scrollbar()
         
 
+    def change_status_global(self, status):
+        ''' cambia lo status di tutti gli ordini selezionati, dal dropdown in alto'''
+        cl = self.check_list
+        ids = np.array([i for i in range(len(cl)) if cl[i].get()==1])
+        for i in ids:
+            i = len(self.dataset) - (i+1) #inverti l'ordine delle righe
+            self.change_status(i, status)
+        self.fill_scrollbar()
+
+
     def change_status(self, id, status):
+        ''' cambia lo status del singolo ordine '''
         #print(id)
         #print(status)
         self.dataset.loc[id, 'status'] = status
@@ -892,6 +1404,7 @@ class SalesManager:
         #self.fill_scrollbar()
         #self.parent.SV.update()
         self.parent.update_sv()
+        self.parent.update_qv()
 
 
 ############################################################################################################ SCONTI
