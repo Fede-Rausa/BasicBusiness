@@ -51,7 +51,7 @@ class QuantityViewer:
         # self.impo = self.impo.sort_values('categoria').reset_index(drop=True)
         
         #faster way
-        self.impo = self.parent.SM.impo
+        self.impo = self.parent.SM.impo.copy()
 
 
     def setupUi(self):

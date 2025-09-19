@@ -50,7 +50,7 @@ class SalesManager:
             # Ordina per categoria ogni volta che leggi il file
             ordine_categoria = self.cats  #['P', 'C', 'B']
             self.impo['categoria'] = pd.Categorical(self.impo['categoria'], categories=ordine_categoria, ordered=True)
-            self.impo = self.impo.sort_values('categoria').reset_index(drop=True)
+            self.impo = self.impo.sort_values(by = ['categoria', 'prodotto']).reset_index(drop=True)
         else:
             self.gen_example_impo()
 
@@ -66,7 +66,8 @@ class SalesManager:
         # Ordina per categoria prima di salvare
         ordine_categoria = self.cats #['P', 'C', 'B']
         impo['categoria'] = pd.Categorical(impo['categoria'], categories=ordine_categoria, ordered=True)
-        impo = impo.sort_values('categoria').reset_index(drop=True)
+        #impo = impo.sort_values('categoria').reset_index(drop=True)
+        impo = impo.sort_values(by = ['categoria', 'prodotto']).reset_index(drop=True)
 
         impo.to_csv(self.path_impo, sep=';', decimal=',', index=False)
         self.impo = impo
