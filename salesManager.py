@@ -1330,13 +1330,13 @@ class SalesManager:
 
             #df_barplot = pd.DataFrame({'date': unici, 'revenue': ricavi})
 
-            axs2[1][0].axis('off')
+            axs2[1][1].axis('off')
 
-            axs2[1][1].clear()
-            axs2[1][1].bar(date_u, ricavi) #= sns.barplot(df_barplot, y='date', x='revenue', orient='v')
-            axs2[1][1].set_title('ricavi per giorni')
-            axs2[1][1].set_xlabel('date')
-            axs2[1][1].set_ylabel('revenue')
+            axs2[1][0].clear()
+            axs2[1][0].bar(date_u, ricavi) #= sns.barplot(df_barplot, y='date', x='revenue', orient='v')
+            axs2[1][0].set_title('ricavi per giorni')
+            axs2[1][0].set_xlabel('date')
+            axs2[1][0].set_ylabel('revenue')
 
 
             axs2[0][0].clear()
