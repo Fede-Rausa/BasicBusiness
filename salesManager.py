@@ -141,6 +141,7 @@ class SalesManager:
 
     def update_sv(self):
         #self.parent.SV.gen_rows() #correct for just one sales viewer
+        print('update sv called')
 
         pop_ids = []
         for i in range(len(self.parent.svlist)):  
@@ -161,6 +162,9 @@ class SalesManager:
             self.parent.svlist.pop(i)
 
     def update_qv(self):
+
+        print('update sv called')
+
         pop_ids = []
         for i in range(len(self.parent.qvlist)):  
             qv = self.parent.qvlist[i]
@@ -807,7 +811,7 @@ class SalesManager:
         self.spinfont = tk.Spinbox(panelopt_frame, from_=5, to=50, increment=1, 
                                 font=('Calibri', '12', 'bold'), width=5, 
                                 repeatinterval=100, repeatdelay=500,
-                                command = self.update_sv())#call_gen_rows)
+                                command = self.update_sv) #call_gen_rows)
         self.spinfont.pack(side=tk.LEFT)
         self.spinfont.delete(0, tk.END)
         self.spinfont.insert(0, "20")
@@ -825,7 +829,7 @@ class SalesManager:
         self.spinfont2 = tk.Spinbox(qpanelopt_frame, from_=5, to=50, increment=1, 
                                 font=('Calibri', '12', 'bold'), width=5, 
                                 repeatinterval=100, repeatdelay=500,
-                                command = self.update_qv())#call_gen_rows2)
+                                command = self.update_qv)  #call_gen_rows2)
         
         self.spinfont2.pack(side=tk.LEFT)
         self.spinfont2.delete(0, tk.END)
