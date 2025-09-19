@@ -650,10 +650,32 @@ class SalesManager:
         self.impo_frame.pack(expand=True, pady=5, padx=5)  
 
         ##nuovo form per le impostazioni
-        self.impoListForm = tk.Frame(self.impo_frame)
-        self.impoListForm.pack(side = tk.TOP)
         impoControl = tk.Frame(self.impo_frame)
         impoControl.pack(side = tk.TOP)
+
+
+        #scrollbar
+
+        
+        subimpo_frame = tk.Frame(self.impo_frame)
+        subimpo_frame.pack(side=tk.TOP)
+
+        scrollbar = tk.Scrollbar(subimpo_frame)    # Creiamo una barra di scorrimento verticale
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)#grid(row=4, column=10)
+
+        self.mat0_frame = tk.Canvas(subimpo_frame, yscrollcommand=scrollbar.set)  # Creiamo un canvas che conterrà il frame scrollabile
+        self.mat0_frame.pack(side=tk.TOP)#grid(row=4, column=1)
+        scrollbar.config(command=self.mat0_frame.yview)
+
+        self.impoListForm = tk.Frame(self.mat0_frame)    # Creiamo un frame all'interno del canvas
+        self.mat0_frame.create_window((0, 0), window=self.impoListForm, anchor="nw")  # Creiamo un window per il canvas, che conterrà il frame scrollabile
+        def on_configure(event):  # Funzione per aggiornare la dimensione del canvas al ridimensionamento del frame
+                self.mat0_frame.configure(scrollregion=self.mat0_frame.bbox("all"))
+        self.impoListForm.bind("<Configure>", on_configure)
+
+
+        #self.impoListForm = tk.Frame(self.impo_frame)
+        #self.impoListForm.pack(side = tk.TOP)
 
         #per avere informazioni dall'oggetto
         self.listaNomiProdotti = []
