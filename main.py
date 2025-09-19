@@ -36,8 +36,6 @@ class SalesTask:
 
         root.protocol("WM_DELETE_WINDOW", self.on_closing)
 
-
-        
     def update_sv(self):   #update the sales viewers
         for sv in self.svlist:
             sv.update()

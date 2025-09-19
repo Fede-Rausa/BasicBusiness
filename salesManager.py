@@ -22,13 +22,11 @@ class SalesManager:
         self.path_impo = "impostazioniCassa.csv"
         self.path_sconti = "scontiCassa.csv"
 
-        self.impostazioniGet()
-        
         self.basicHeaders = np.array(['cliente', 'status', 'scontoSpeciale', 'sconto', 'prezzo', 'giorno', 'ts', 'NOTE'])
         self.opts = ['TODO', 'DONE', 'STBY']
-        self.cats = ['P', 'C', 'B']
-
-        #self.impostazioniGet()
+        self.cats = ['Panini', 'Contorni', 'Bibite', 'Dolci', 'Frutta', 'Drink', 'Primi', 'Secondi', 'Antipasti', 'Pizze', 'Mare', 'Fritti'] #['P', 'C', 'B']
+        
+        self.impostazioniGet()
         self.importaDati()
 
         # create ui for cassa
@@ -50,7 +48,7 @@ class SalesManager:
         if os.path.exists(self.path_impo):
             self.impo = pd.read_csv(self.path_impo, sep=';', decimal=',')
             # Ordina per categoria ogni volta che leggi il file
-            ordine_categoria = ['P', 'C', 'B']
+            ordine_categoria = self.cats  #['P', 'C', 'B']
             self.impo['categoria'] = pd.Categorical(self.impo['categoria'], categories=ordine_categoria, ordered=True)
             self.impo = self.impo.sort_values('categoria').reset_index(drop=True)
         else:
@@ -58,14 +56,15 @@ class SalesManager:
 
     def gen_example_impo(self):
         impo = {
-            'prodotto' : ['salamella', 'speck', 'vegetariano', 'patatine', 'an cipolla', 'piadanutella', 'birra','acqua', 'spritz'],
-            'prezzo':   [4, 4, 4, 3, 3, 3, 3, 1.2, 3],
-            'categoria':['P', 'P', 'P', 'C', 'C', 'C', 'B', 'B', 'B']
+            'prodotto' : ['salamella', 'speck', 'vegetariano', 'patatine', 'an cipolla', 'piadanutella', 'birra','acqua', 'spritz', 'mela'],
+            'prezzo':   [4, 4, 4, 3, 3, 3, 3, 1.2, 3, 1.2],
+            'categoria':  [self.cats[0]]*3 + [self.cats[1]]*2 + [self.cats[3]] + [self.cats[2]]*3 + [self.cats[4]]   #['P', 'P', 'P', 'C', 'C', 'C', 'B', 'B', 'B']
         }
+
         impo = pd.DataFrame(impo)
 
         # Ordina per categoria prima di salvare
-        ordine_categoria = ['P', 'C', 'B']
+        ordine_categoria = self.cats #['P', 'C', 'B']
         impo['categoria'] = pd.Categorical(impo['categoria'], categories=ordine_categoria, ordered=True)
         impo = impo.sort_values('categoria').reset_index(drop=True)
 
@@ -147,30 +146,96 @@ class SalesManager:
     def aggiornasconti(self):
         if (os.path.exists(self.path_sconti)):
             sconti = pd.read_csv(self.path_sconti, sep=';', decimal=',')
-            self.scontoPC.delete(0, "end")
-            self.scontoPC.insert(0, sconti['scontoPC'][0])
-            self.scontoPB.delete(0, "end")
-            self.scontoPB.insert(0, sconti['scontoPB'][0])
-            self.scontoCB.delete(0, "end")
-            self.scontoCB.insert(0, sconti['scontoCB'][0])
+
+            for i in range(len(self.discount_spins)):
+                sb = self.discount_spins[i]
+                dn = self.discount_names[i]
+                sb.delete(0, 'end')
+                sb.insert(0, sconti[dn][0])
+
+            #old good work
+            # self.scontoPC.delete(0, "end")
+            # self.scontoPC.insert(0, sconti['scontoPC'][0])
+            # self.scontoPB.delete(0, "end")
+            # self.scontoPB.insert(0, sconti['scontoPB'][0])
+            # self.scontoCB.delete(0, "end")
+            # self.scontoCB.insert(0, sconti['scontoCB'][0])
 
     def fill_cassa(self):
         self.cassa_frame.destroy()
         # Create a main frame to center everything
         self.cassa_frame = tk.Frame(self.root)
         self.cassa_frame.pack(expand=True, pady=5, padx=5)  
-        #NB: I frame vanno posizionati solo DOPO l'assegnazione        
-        catTag = ['P', 'C', 'B'] # self.cats
-        catName = ['Panini', 'Contorni', 'Bibite'] #self.cats
+
+        box_frame = tk.Frame(self.cassa_frame, bd=2, relief="groove")
+        box_frame.grid(row=0,column=0, pady=1)
+
+        customer_frame = tk.Frame(self.cassa_frame, bd=2, relief="groove")
+        customer_frame.grid(row=0,column=1, padx=10, pady=1)
+
+        sconti_frame = tk.Frame(self.cassa_frame, bd=2, relief="groove")
+        sconti_frame.grid(row=0,column=2, pady=1)
+
+        #NB: I frame vanno posizionati solo DOPO l'assegnazione   
+
+        self.used_cats = []
+        for c in self.cats:
+            #print(c)
+            #print(c in list(self.impo['categoria']))
+            if (c in list(self.impo['categoria'])):
+                self.used_cats.append(c)
+        
+        catTag = self.used_cats #self.cats  #['P', 'C', 'B'] # self.cats
+        catName = self.used_cats #self.cats  #['Panini', 'Contorni', 'Bibite'] #self.cats
 
         self.sbListQ = []
         self.sbListS = []
-        
-        for k in range(self.impo.shape[1]):
-            #print(k)
 
-            cat_frame = tk.Frame(self.cassa_frame, bd=2, relief="groove", padx=5, pady=10)
-            cat_frame.grid(row=0, column=k, padx=0, pady=0)    
+        #auto ordering of category boxes
+        cat_counts = [np.array(self.impo['categoria'] == catTag[k]).astype(int).sum() for k in range(len(self.used_cats))]
+        cat_indexes = [k for k in range(len(self.used_cats))]
+        
+        max_col = 3
+        cat_rows = []
+        cat_cols = []
+        cols_counts = []
+        cols_boxes = [0]*max_col
+
+        sub_box_frames = []
+        for i in range(max_col):
+            sub_box_frame = tk.Frame(box_frame)
+            sub_box_frame.grid(row=0, column=i)
+            sub_box_frames.append(sub_box_frame)
+
+        for k in cat_indexes:
+            if (k < max_col):
+                cat_rows.append(0)
+                cat_cols.append(k)
+                cols_counts.append(cat_counts[k])
+                cols_boxes[k] += 1
+            else:
+                cols_sums = np.array(cols_counts) + cat_counts[k]
+                id_min = np.argmin(cols_sums)
+                cols_boxes[id_min] += 1
+                cols_counts[id_min] = cols_sums[id_min]
+                cat_cols.append(id_min)
+                cat_rows.append(cols_boxes[id_min] - 1)
+
+
+        for k in range(len(self.used_cats)):
+
+            #very old work
+            #cat_frame.grid(row=0, column=k, padx=0, pady=0) 
+
+            #old way
+            # cat_frame = tk.Frame(box_frame, bd=2, relief="groove", padx=0, pady=0)
+            # cat_frame.grid(row = cat_rows[k], column = cat_cols[k], padx=0, pady=0)  #advanced auto ordering
+
+            #new way
+            cat_frame = tk.Frame(sub_box_frames[cat_cols[k]], bd=2, relief="groove", padx=0, pady=0)
+            cat_frame.grid(row = cat_rows[k], column = 0, padx=0, pady=0)  #advanced auto ordering, with space compression
+
+
             labelFrame = tk.Label(cat_frame, text=catName[k], font=("Arial", 14, "bold"))
             labelFrame.grid(row=0, column=0)
             formFrame = tk.Frame(cat_frame)
@@ -221,18 +286,16 @@ class SalesManager:
 
 
         ##AREE UI per fattura, note e resto        
-        conti_frame = tk.Frame(self.cassa_frame, bd=2, relief="groove")
-        conti_frame.grid(row=1, column=1)
-        note_frame = tk.Frame(self.cassa_frame, bd=2, relief="groove")
-        note_frame.grid(row=1, column=2)
+        conti_frame = tk.Frame(customer_frame, bd=2, relief="groove")
+        conti_frame.grid(row=0, column= 0, pady = 0)
+        resto_frame = tk.Frame(customer_frame, pady = 0, padx=2, bd=2, relief="groove" )
+        resto_frame.grid(row = 2, column = 0, pady = 10)
+        note_frame = tk.Frame(customer_frame)#, bd=2, relief="groove")
+        note_frame.grid(row=1, column= 0, pady = 0)
 
-        resto_e_sconti_frame = tk.Frame(self.cassa_frame)
-        resto_e_sconti_frame.grid(row=1, column=0)
+        #resto_e_sconti_frame = tk.Frame(self.cassa_frame)
+        #resto_e_sconti_frame.grid(row=3, column = max_col)
 
-        resto_frame = tk.Frame(resto_e_sconti_frame, bd=2, relief="groove", pady = 5, padx=5 )
-        resto_frame.grid(row=0, column=0)
-        sconti_frame = tk.Frame(resto_e_sconti_frame, bd=2, relief="groove", pady = 5, padx=5 )
-        sconti_frame.grid(row=1, column=0)
 
         ##RESTO UI
         tk.Label(resto_frame, text='CONSEGNA', font=("Arial", 14)).grid(row=1, column=0)
@@ -243,75 +306,128 @@ class SalesManager:
         self.valore_consegna = tk.Spinbox(resto_frame, text='20', increment=0.01, from_=0, to=99, width=5, 
         command=self.calcola_resto, font=("Arial", 12))
         self.valore_consegna.grid(row=1, column=1)
-        tk.Button(resto_frame, text='calcola resto', command=self.calcola_resto, font=("Arial", 14)).grid(row=3, column=1, pady=10)
+        tk.Button(resto_frame, text='calcola resto', command=self.calcola_resto, font=("Arial", 12)).grid(row=3, column=1, pady=10)
 
 
         ##SCONTO COPPIE DI CATEGORIE UI
+        #sconti_frame = tk.Frame(self.cassa_frame, bd=2, relief="groove", pady = 1, padx=1)
+        #sconti_frame.grid(row=0, column=max_col+1)
+
+        tk.Label(sconti_frame, text='IMPOSTA SCONTI', font = ("Arial",8)).grid(row=0, column=0)
+        tk.Label(sconti_frame, text='', font = ("Arial",8)).grid(row=1, column=0)
+
+
+        #ottieni coppie di categorie univoche
+        k = len(self.used_cats)
+        vals = np.arange(k).tolist()
+        couples = []
+        for i in vals:
+            if i > 0:
+                for j in range(i):
+                    couples.append((i,j))
+
+        L = len(couples)
+
+
+        s_names = []
+        s_value = []
+        s_spinbox = []
+        for i in range(L):
+            id_A, id_B = couples[i]
+            A = self.used_cats[id_A]
+            B = self.used_cats[id_B]
+            name = A+'_'+B
+            s_names.append(name)
+            tk.Label(sconti_frame, text=name, font = ("Arial",10)).grid(row=2+i, column=0)
+            sb = tk.Spinbox(sconti_frame, increment=0.01, from_=0, to=99, width=5, command=self.on_spinbox_change)
+            sb.grid(row=2+i, column=1)
+            s_spinbox.append(sb)
+            sv = tk.StringVar(sconti_frame, "0")
+            tk.Label(sconti_frame, textvariable = sv, font = ("Arial",10)).grid(row=2+i, column=2)
+            s_value.append(sv)
+
+        self.discount_spins = s_spinbox
+        self.discount_couples = couples
+        self.discount_names = s_names
+        self.discount_values = s_value
 
         def salvasconti():
-            sconti = pd.DataFrame(columns=['scontoPC', 'scontoPB', 'scontoCB'])
-            sconti.loc[0] = [self.scontoPC.get(), self.scontoPB.get(), self.scontoCB.get()]
+            sconti = pd.DataFrame(columns = s_names)
+            sconti.loc[0] = [sb.get() for sb in s_spinbox]
             sconti.to_csv(self.path_sconti, sep=';', index=False, decimal=',')
 
 
-        tk.Label(sconti_frame, text='IMPOSTA SCONTI', font = ("Arial",14)).grid(row=3, column=0)
-        tk.Label(sconti_frame, text='', font = ("Arial",10)).grid(row=4, column=0)
-        tk.Label(sconti_frame, text="sconto P+C", font = ("Arial",10)).grid(row=5, column=0)
-        tk.Label(sconti_frame, text="sconto P+B", font = ("Arial",10)).grid(row=6, column=0)
-        tk.Label(sconti_frame, text="sconto C+B", font = ("Arial",10)).grid(row=7, column=0)
-        self.scontoPC = tk.Spinbox(sconti_frame, increment=0.01, from_=0, to=99, width=5, command=self.on_spinbox_change)
-        self.scontoPC.grid(row=5, column=1)
-        self.scontoPB = tk.Spinbox(sconti_frame, increment=0.01, from_=0, to=99, width=5, command=self.on_spinbox_change)
-        self.scontoPB.grid(row=6, column=1)
-        self.scontoCB = tk.Spinbox(sconti_frame, increment=0.01, from_=0, to=99, width=5, command=self.on_spinbox_change)
-        self.scontoCB.grid(row=7, column=1)
-        self.scontoPCT = tk.StringVar(sconti_frame, "0")
-        tk.Label(sconti_frame, textvariable= self.scontoPCT, font = ("Arial",10)).grid(row=5, column=2)
-        self.scontoPBT = tk.StringVar(sconti_frame, "0")
-        tk.Label(sconti_frame, textvariable= self.scontoPBT, font = ("Arial",10)).grid(row=6, column=2)
-        self.scontoCBT = tk.StringVar(sconti_frame, "0")
-        tk.Label(sconti_frame, textvariable= self.scontoCBT, font = ("Arial",10)).grid(row=7, column=2)
-
         tk.Button(sconti_frame, text='salva sconti', command=salvasconti,
-                 font=("Arial", 14)).grid(row=8, column=1)
+                 font=("Arial", 10)).grid(row=0, column=1)
+
+
+
+        #old good work
+        # tk.Label(sconti_frame, text="sconto P+C", font = ("Arial",10)).grid(row=2, column=0)
+        # tk.Label(sconti_frame, text="sconto P+B", font = ("Arial",10)).grid(row=3, column=0)
+        # tk.Label(sconti_frame, text="sconto C+B", font = ("Arial",10)).grid(row=4, column=0)
+        # self.scontoPC = tk.Spinbox(sconti_frame, increment=0.01, from_=0, to=99, width=5, command=self.on_spinbox_change)
+        # self.scontoPC.grid(row=2, column=1)
+        # self.scontoPB = tk.Spinbox(sconti_frame, increment=0.01, from_=0, to=99, width=5, command=self.on_spinbox_change)
+        # self.scontoPB.grid(row=3, column=1)
+        # self.scontoCB = tk.Spinbox(sconti_frame, increment=0.01, from_=0, to=99, width=5, command=self.on_spinbox_change)
+        # self.scontoCB.grid(row=4, column=1)
+        # self.scontoPCT = tk.StringVar(sconti_frame, "0")
+        # tk.Label(sconti_frame, textvariable= self.scontoPCT, font = ("Arial",10)).grid(row=2, column=2)
+        # self.scontoPBT = tk.StringVar(sconti_frame, "0")
+        # tk.Label(sconti_frame, textvariable= self.scontoPBT, font = ("Arial",10)).grid(row=3, column=2)
+        # self.scontoCBT = tk.StringVar(sconti_frame, "0")
+        # tk.Label(sconti_frame, textvariable= self.scontoCBT, font = ("Arial",10)).grid(row=4, column=2)
+
+
+
+
 
 
         ##FATTURA UI
-        tk.Label(conti_frame, text='STATUS', font=("Arial", 14)).grid(row=1, column=0)
-        tk.Label(conti_frame, text='sconto special:', font=("Arial", 14)).grid(row=2, column=0)
-        tk.Label(conti_frame, text='sconto:', font=("Arial", 14)).grid(row=3, column=0)
-        tk.Label(conti_frame, text='PREZZO BASE:', font=("Arial", 14)).grid(row=4, column=0)
-        tk.Label(conti_frame, text='PREZZO:', font=("Arial", 14, "bold")).grid(row=5, column=0)
+        tk.Label(conti_frame, text='sconto special:', font=("Arial", 14)).grid(row=1, column=0)
+        tk.Label(conti_frame, text='sconto:', font=("Arial", 14)).grid(row=2, column=0)
+        tk.Label(conti_frame, text='PREZZO BASE:', font=("Arial", 14)).grid(row=3, column=0)
+        tk.Label(conti_frame, text='PREZZO:', font=("Arial", 14, "bold")).grid(row=4, column=0)
 
         ctk.CTkButton(conti_frame, text='CONFERMA', fg_color='#f46881', hover_color='red', width=10,
-                    command=self.conferma).grid(row=6, column=0)
+                    command=self.conferma).grid(row=5, column=0)
         ctk.CTkButton(conti_frame, text='CLEAR', hover_color='blue', width=10,
-                    command=self.pulisci).grid(row=6, column=1, pady=2, padx=2)
+                    command=self.pulisci).grid(row=5, column=1, pady=2, padx=2)
 
-        selFiltri = self.opts
-        self.actualStatus = tk.StringVar()
-        self.actualStatus.set(selFiltri[0])
-        drop = tk.OptionMenu(conti_frame , self.actualStatus , *selFiltri) # dropdown
-        drop.grid(row = 1, column = 1)
 
-        self.scontoS = tk.Spinbox(conti_frame, increment=0.01, from_=0, to=99, width=5, 
+
+        self.scontoS = tk.Spinbox(conti_frame, increment=0.01, from_=0, to=99, width=5, font = ('Arial', 12),
                                 command=self.on_spinbox_change)
-        self.scontoS.grid(row=2, column=1)
+        self.scontoS.grid(row=1, column=1)
 
         self.scontoT = tk.StringVar(value='0')
         self.prezzoB = tk.StringVar(value='0')
         self.prezzoT = tk.StringVar(value='0')
-        tk.Label(conti_frame, textvariable=self.scontoT, font=("Arial", 14)).grid(row=3, column=1)
-        tk.Label(conti_frame, textvariable=self.prezzoB, font=("Arial", 14)).grid(row=4, column=1)
-        tk.Label(conti_frame, textvariable=self.prezzoT, font=("Arial", 14, "bold")).grid(row=5, column=1)
+        tk.Label(conti_frame, textvariable=self.scontoT, font=("Arial", 14)).grid(row=2, column=1)
+        tk.Label(conti_frame, textvariable=self.prezzoB, font=("Arial", 14)).grid(row=3, column=1)
+        tk.Label(conti_frame, textvariable=self.prezzoT, font=("Arial", 14, "bold")).grid(row=4, column=1)
 
         ##note e id cliente UI
-        tk.Label(note_frame, text='ID cliente:', font=("Arial", 12)).grid(row=0, column=0)
+
+
+        tk.Label(note_frame, text='status cliente:', font=("Arial", 12)).grid(row=0, column=0)
+        selFiltri = self.opts
+        self.actualStatus = tk.StringVar()
+        self.actualStatus.set(selFiltri[0])
+        drop = ctk.CTkComboBox(note_frame , variable=self.actualStatus , values = selFiltri)
+        drop.grid(row = 1, column = 0)
+
+        #drop = tk.OptionMenu(note_frame , self.actualStatus , *selFiltri) # dropdown
+        #drop.grid(row = 1, column = 0)
+
+
+        tk.Label(note_frame, text='ID cliente:', font=("Arial", 12)).grid(row=2, column=0)
         self.NOME = tk.Entry(note_frame, text='', font=("Arial", 12))
-        self.NOME.grid(row=1, column=0)
-        tk.Label(note_frame, text='NOTE:', font=("Arial", 12)).grid(row=2, column=0)
+        self.NOME.grid(row=3, column=0)
+        tk.Label(note_frame, text='NOTE:', font=("Arial", 12)).grid(row=4, column=0)
         self.NOTE = tk.Text(note_frame, width = 30, height=4)
-        self.NOTE.grid(row=3, column=0)
+        self.NOTE.grid(row=5, column=0)
 
     def calcola_resto(self):
         self.valore_resto.set('€ '+str(float(self.valore_consegna.get()) - self.prezzoFattura))
@@ -331,32 +447,60 @@ class SalesManager:
         Qvet = np.array([int(q.get()) for q in self.sbListQ])
         Svet = np.array([float(q.get()) for q in self.sbListS])
         Pvet = np.array(self.impo['prezzo'])
-        contaPanini = np.array(self.impo['categoria'] == 'P')
-        contaContorni = np.array(self.impo['categoria'] == 'C')
-        contaBibite = np.array(self.impo['categoria'] == 'B')
+
         prezzoBase = np.dot(Qvet, Pvet)
         sconto1 = np.dot(Qvet, Svet)
         sconto0 = float(self.scontoS.get())
-        scontoPC = min(np.sum(Qvet[contaPanini]), np.sum(Qvet[contaContorni])) * float(self.scontoPC.get())
-        scontoPB = min(np.sum(Qvet[contaPanini]), np.sum(Qvet[contaBibite])) * float(self.scontoPB.get())
-        scontoCB = min(np.sum(Qvet[contaContorni]), np.sum(Qvet[contaBibite])) * float(self.scontoCB.get())
-        sconto = sconto1 + sconto0 + scontoPC + scontoPB + scontoCB
+
+
+        qcounts = [np.sum(Qvet[np.array(self.impo['categoria'] == c)]) for c in self.used_cats]
+        disconuts_spins = self.discount_spins
+        discount_couples = self.discount_couples
+
+        sconto2 = 0
+        discounts_c = []
+        for i in range(len(discount_couples)):
+            a,b = discount_couples[i]
+            d = min(qcounts[a], qcounts[b]) * float(disconuts_spins[i].get())
+            discounts_c.append(d)
+            sconto2 += d
+
+
+        #old good work
+        # contaPanini = np.array(self.impo['categoria'] == 'Panini')
+        # contaContorni = np.array(self.impo['categoria'] == 'Contorni')
+        # contaBibite = np.array(self.impo['categoria'] == 'Bibite')
+
+        # scontoPC = min(np.sum(Qvet[contaPanini]), np.sum(Qvet[contaContorni])) * float(self.scontoPC.get())
+        # scontoPB = min(np.sum(Qvet[contaPanini]), np.sum(Qvet[contaBibite])) * float(self.scontoPB.get())
+        # scontoCB = min(np.sum(Qvet[contaContorni]), np.sum(Qvet[contaBibite])) * float(self.scontoCB.get())
+
+        # sconto2 = scontoPC + scontoPB + scontoCB
+
+        sconto = sconto2 + sconto1 + sconto0 
+
         prezzoFattura = round(prezzoBase - sconto, 2)
-        return Qvet, Svet, Pvet, sconto, sconto0, scontoPC, scontoPB, scontoCB, prezzoBase, prezzoFattura
+        return Qvet, Svet, Pvet, sconto, sconto0, discounts_c, prezzoBase, prezzoFattura
 
     def fattura(self):
-        Qvet, Svet, Pvet, sconto, sconto0, scontoPC, scontoPB, scontoCB, prezzoBase, prezzoFattura = self.calcola_fattura()
+        Qvet, Svet, Pvet, sconto, sconto0, discounts_c, prezzoBase, prezzoFattura = self.calcola_fattura()
         self.prezzoFattura = prezzoFattura
         self.scontoT.set("€ "+str(round(sconto, 2)))
         self.prezzoB.set("€ "+str(round(prezzoBase,2)))
         self.prezzoT.set("€ "+str(self.prezzoFattura))
-        self.scontoPCT.set("€ "+str(round(scontoPC,2)))
-        self.scontoPBT.set("€ "+str(round(scontoPB,2)))
-        self.scontoCBT.set("€ "+str(round(scontoCB,2)))
+
+        for i in range(len(self.discount_values)):
+            self.discount_values[i].set("€ "+str(round(discounts_c[i], 2)))
+
+        #old good work
+        # self.scontoPCT.set("€ "+str(round(scontoPC,2)))
+        # self.scontoPBT.set("€ "+str(round(scontoPB,2)))
+        # self.scontoCBT.set("€ "+str(round(scontoCB,2)))
+
         self.calcola_resto()
 
     def conferma(self):
-        Qvet, Svet, Pvet, sconto, sconto0, scontoPC, scontoPB, scontoCB, prezzoBase, prezzoFattura = self.calcola_fattura()
+        Qvet, Svet, Pvet, sconto, sconto0, discount_c, prezzoBase, prezzoFattura = self.calcola_fattura()
         prezzo = prezzoBase - sconto
         clientID = self.NOME.get()
         note = self.NOTE.get("1.0","end").replace("\n", "")
@@ -419,7 +563,7 @@ class SalesManager:
         import win32print
         import win32ui
         
-        Qvet, Svet, Pvet, sconto, sconto0, scontoPC, scontoPB, scontoCB, prezzoBase, prezzoFattura = self.calcola_fattura()
+        Qvet, Svet, Pvet, sconto, sconto0, discount_c, prezzoBase, prezzoFattura = self.calcola_fattura()
         clientID = self.NOME.get()
         note = self.NOTE.get("1.0","end").replace("\n", "")
         
@@ -549,7 +693,7 @@ class SalesManager:
             df.loc[i] = [prod, prezzo, cat]
 
         # Ordina il DataFrame per categoria P, C, B
-        ordine_categoria = ['P', 'C', 'B']  #self.cats
+        ordine_categoria = self.cats #['P', 'C', 'B']  #self.cats
         df['categoria'] = pd.Categorical(df['categoria'], categories=ordine_categoria, ordered=True)
         df = df.sort_values('categoria').reset_index(drop=True)
 
@@ -884,7 +1028,7 @@ class SalesManager:
                                             aggfunc='sum',
                                             sort=False).T
 
-            for c in self.cats:
+            for c in self.used_cats:
                 nomi = np.array(self.impo['prodotto'])[self.impo['categoria']==c].tolist()
                 pivoTab_p = df.pivot_table(index = 'date', 
                                                 values = nomi,
@@ -1085,7 +1229,7 @@ class SalesManager:
                                             aggfunc='sum',
                                             sort=False).T
 
-            for c in self.cats:
+            for c in self.used_cats:
                 nomi = np.array(self.impo['prodotto'])[self.impo['categoria']==c].tolist()
                 pivoTab_p = df.pivot_table(index = 'date', 
                                                 values = nomi,
@@ -1344,12 +1488,12 @@ class SalesManager:
                 self.check_list.append(checkVar)
 
                 def read_cv(cv):
-                    print(cv.get())
+                    #print(cv.get())
 
-                checkinput = ctk.CTkCheckBox(row_frame,  text='',  variable=checkVar, 
-                                             onvalue=1, offvalue=0,
-                                             command = lambda cv = checkVar: read_cv(cv))
-                checkinput.pack(side=tk.LEFT, padx=5)                
+                    checkinput = ctk.CTkCheckBox(row_frame,  text='',  variable=checkVar, 
+                                                onvalue=1, offvalue=0,
+                                                command = lambda cv = checkVar: read_cv(cv))
+                    checkinput.pack(side=tk.LEFT, padx=5)                
 
 
                 #dropdown for single selection
