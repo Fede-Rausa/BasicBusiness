@@ -98,8 +98,10 @@ class SalesManager:
         df = self.dataset
         df.loc[len(df)] = newrow.tolist()
         df.to_csv(self.path_dataset, sep=';', index=False, decimal=',')
-        self.parent.update_sv()      #ricarica i sales viewer
-        self.parent.update_qv()      #ricarica i quantity viewer
+        self.update_sv() #self.parent.update_sv()      #ricarica i sales viewer
+        self.update_qv() #self.parent.update_qv()      #ricarica i quantity viewer
+
+    
 
     def aggiornaDati0(self):
         df = self.dataset
@@ -132,6 +134,49 @@ class SalesManager:
 
             if (fr_names[i] == 'order'):
                 self.fill_scrollbar()
+
+
+################################################################################################ TOPLEVELS CLOSING
+
+    def update_sv(self):
+        #self.parent.SV.gen_rows() #correct for just one sales viewer
+
+        pop_ids = []
+        for i in range(len(self.parent.svlist)):  
+            sv = self.parent.svlist[i]
+            try:
+                sv.gen_rows()
+                #sv.update()
+            except Exception as e:
+                print('errore in update_sv')
+                print(e)
+                pop_ids.append(i)
+
+            #if (sv is not None):
+            #    sv.gen_rows()
+            #else:
+            #    pop_ids.append(i)
+        for i in pop_ids:
+            self.parent.svlist.pop(i)
+
+    def update_qv(self):
+        pop_ids = []
+        for i in range(len(self.parent.qvlist)):  
+            qv = self.parent.qvlist[i]
+            try:
+                #qv.gen_rows()
+                qv.update()
+            except Exception as e:
+                print('errore in update_qv')
+                print(e)
+                pop_ids.append(i)       
+
+        for i in pop_ids:
+            self.parent.qvlist.pop(i)               
+
+
+
+
 
 
 
@@ -709,7 +754,12 @@ class SalesManager:
 
 
 
+
+
+
 ############################################################################################################ TOOLS
+
+
 
     def setupPanelOpt(self):
         self.opt_frame = tk.Frame(self.root)
@@ -717,41 +767,6 @@ class SalesManager:
 
         panelopt_frame = tk.Frame(self.opt_frame)
         panelopt_frame.pack(pady=10, padx=10, side=tk.TOP)
-
-        def call_gen_rows():
-            #self.parent.SV.gen_rows() #correct for just one sales viewer
-
-            pop_ids = []
-            for i in range(len(self.parent.svlist)):  
-                sv = self.parent.svlist[i]
-                try:
-                    sv.gen_rows()
-                except Exception as e:
-                    print('errore in call_gen_rows')
-                    print(e)
-                    pop_ids.append(i)
-
-                #if (sv is not None):
-                #    sv.gen_rows()
-                #else:
-                #    pop_ids.append(i)
-            for i in pop_ids:
-                self.parent.svlist.pop(i)
-
-        def call_gen_rows2():
-            pop_ids = []
-            for i in range(len(self.parent.qvlist)):  
-                qv = self.parent.qvlist[i]
-                try:
-                    qv.gen_rows()
-                except Exception as e:
-                    print('errore in call_gen_rows2')
-                    print(e)
-                    pop_ids.append(i)       
-
-            for i in pop_ids:
-                self.parent.qvlist.pop(i)               
-
                 
 
         #filtra per tipo di ordine
@@ -760,7 +775,7 @@ class SalesManager:
         self.selezione = tk.StringVar()
         self.selezione.set('ALL')
         drop = tk.OptionMenu(panelopt_frame , self.selezione , *selFiltri,
-        command = lambda e: call_gen_rows()) # dropdown
+        command = lambda e: self.update_sv())#call_gen_rows()) # dropdown
         drop.pack(side=tk.LEFT, padx=10) 
 
         # cambia le dimensioni del font
@@ -769,7 +784,7 @@ class SalesManager:
         self.spinfont = tk.Spinbox(panelopt_frame, from_=5, to=50, increment=1, 
                                 font=('Calibri', '12', 'bold'), width=5, 
                                 repeatinterval=100, repeatdelay=500,
-                                command = call_gen_rows)
+                                command = self.update_sv())#call_gen_rows)
         self.spinfont.pack(side=tk.LEFT)
         self.spinfont.delete(0, tk.END)
         self.spinfont.insert(0, "20")
@@ -787,7 +802,7 @@ class SalesManager:
         self.spinfont2 = tk.Spinbox(qpanelopt_frame, from_=5, to=50, increment=1, 
                                 font=('Calibri', '12', 'bold'), width=5, 
                                 repeatinterval=100, repeatdelay=500,
-                                command = call_gen_rows2)
+                                command = self.update_qv())#call_gen_rows2)
         
         self.spinfont2.pack(side=tk.LEFT)
         self.spinfont2.delete(0, tk.END)
@@ -1487,13 +1502,12 @@ class SalesManager:
                 checkVar.set(0)
                 self.check_list.append(checkVar)
 
-                def read_cv(cv):
+                #def read_cv(cv):
                     #print(cv.get())
 
-                    checkinput = ctk.CTkCheckBox(row_frame,  text='',  variable=checkVar, 
-                                                onvalue=1, offvalue=0,
-                                                command = lambda cv = checkVar: read_cv(cv))
-                    checkinput.pack(side=tk.LEFT, padx=5)                
+                checkinput = ctk.CTkCheckBox(row_frame,  text='',  variable=checkVar, 
+                                            onvalue=1, offvalue=0)#,#command = lambda cv = checkVar: read_cv(cv))
+                checkinput.pack(side=tk.LEFT, padx=5)                
 
 
                 #dropdown for single selection
@@ -1527,8 +1541,8 @@ class SalesManager:
         self.dataset = self.dataset.drop(self.dataset.index[id]).reset_index(drop=True)
         self.aggiornaDati0()
         #print(self.dati)
-        self.parent.update_sv()
-        self.parent.update_qv()
+        self.update_sv() #self.parent.update_sv()
+        self.update_qv()#self.parent.update_qv()
         self.fill_scrollbar()
         
 
@@ -1550,8 +1564,8 @@ class SalesManager:
         self.aggiornaDati0()
         #self.fill_scrollbar()
         #self.parent.SV.update()
-        self.parent.update_sv()
-        self.parent.update_qv()
+        self.update_sv()#self.parent.update_sv()
+        self.update_qv()#self.parent.update_qv()
 
 
 ############################################################################################################ SCONTI

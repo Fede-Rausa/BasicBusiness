@@ -60,8 +60,11 @@ class SalesViewer:
         try:
             self.lista_righe.delete(0, tk.END)
         except:
-            print("Error deleting items from listbox, it may not be initialized yet.")
-            return 
+            if self.root.winfo_exists():
+                print("Error deleting items from listbox, it may not be initialized yet.")
+                return 
+            else:
+                print('the window is destroyed')
 
         # control font of panel text
         self.lista_righe.config(font=('Calibri', int(self.parent.SM.spinfont.get())))

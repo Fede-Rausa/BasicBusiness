@@ -131,9 +131,23 @@ class QuantityViewer:
         self.dataset = self.dataset.reset_index(drop=True) #solution for pandas ValueError: cannot insert level_0, already exists
         last_id = self.dataset['cliente'].iloc[self.dataset.shape[0]-1] #use iloc before [] for indexing pd.df
 
-        #update head
-        self.head_label.config(text = 'last order: ' + str(last_id) + '        last update: ' + time_lab,
-                               font = ("Arial", self.fontsize - 3))
+        self.head_label.config(text='last order: ' + str(last_id) + '        last update: ' + time_lab,
+                            font=("Arial", self.fontsize - 3))
+
+
+
+        # # Update head
+        # try:
+        #     if self.head_label.winfo_exists():
+        #         self.head_label.config(text='last order: ' + str(last_id) + '        last update: ' + time_lab,
+        #                             font=("Arial", self.fontsize - 3))
+        #     else:
+        #         print("head_label widget no longer exists")
+        # except Exception as e:
+        #     print('errore in quantity viewer header')
+        #     print(f"Widget exists: {self.head_label.winfo_exists() if hasattr(self, 'head_label') else 'No attribute'}")
+        #     print(e)
+
 
         #update cells 
         total_rows = len(self.rows)
@@ -141,10 +155,58 @@ class QuantityViewer:
 
         for i in range(total_rows):
             for j in range(total_columns):
-                #self.cells[i][j].destroy()
-                self.cells[i][j].delete(0,tk.END)
-                self.cells[i][j].insert(0, self.rows[i][j])
-                self.cells[i][j].config(font = ("Arial", self.fontsize , "bold"))
+                    self.cells[i][j].delete(0, tk.END)
+                    self.cells[i][j].insert(0, self.rows[i][j])
+                    self.cells[i][j].config(font=("Arial", self.fontsize, "bold"))
+
+
+        # # Update cells
+        # try:
+        #     if self.cells[0][0].winfo_exists():
+        #         for i in range(total_rows):
+        #             for j in range(total_columns):
+        #                     self.cells[i][j].delete(0, tk.END)
+        #                     self.cells[i][j].insert(0, self.rows[i][j])
+        #                     self.cells[i][j].config(font=("Arial", self.fontsize, "bold"))
+        #     else:
+        #         print(f"Cell [{0}][{0}] no longer exists - recreating")
+                
+        #         # Recreate the cell here if needed
+        # except Exception as e:
+        #     print('quantity viewer not updated')
+        #     print(f"Error at ({0}, {0})")
+        #     print(f"Widget exists: {self.cells[0][0].winfo_exists()}")
+        #     print(e)
+
+
+
+        # #update head
+        # try:
+        #     self.head_label.config(text = 'last order: ' + str(last_id) + '        last update: ' + time_lab,
+        #                         font = ("Arial", self.fontsize - 3))
+        # except Exception as e:
+        #     print('errore in quantity viewer header')
+        #     print(last_id)
+        #     print(time_lab)
+        #     print(e)
+
+        # #update cells 
+        # total_rows = len(self.rows)
+        # total_columns = len(self.rows[0])
+        
+
+        # try: 
+        #     for i in range(total_rows):
+        #         for j in range(total_columns):
+        #             #self.cells[i][j].destroy()
+        #             self.cells[i][j].delete(0,tk.END)
+        #             self.cells[i][j].insert(0, self.rows[i][j])
+        #             self.cells[i][j].config(font = ("Arial", self.fontsize , "bold"))
+        # except Exception as e:
+        #     print('quantity viewer not updated')
+        #     print((i, j))
+        #     print(self.cells[i][j])
+        #     print(e)
 
         #self.setupUi()
 
@@ -155,3 +217,14 @@ class QuantityViewer:
         self.gen_rows()
 
 
+
+    # def schedule_task(self, delay, task):
+    #     after_id = self.root.after(delay, task)
+    #     self.after_ids.append(after_id)
+
+    # def on_closing(self):
+    #     # Cancel any scheduled after calls here if needed
+    #     for after_id in self.after_ids:
+    #         self.root.after_cancel(after_id)
+    #     self.root.quit()
+    #     self.root.destroy()
