@@ -418,34 +418,88 @@ class SalesManager:
     def stampa_fattura(self):
         import win32print
         import win32ui
-        
+        import win32con
+        from PIL import Image, ImageWin
+
+        # Calcolo fattura
         Qvet, Svet, Pvet, sconto, sconto0, scontoPC, scontoPB, scontoCB, prezzoBase, prezzoFattura = self.calcola_fattura()
         clientID = self.NOME.get()
         note = self.NOTE.get("1.0","end").replace("\n", "")
-        
-        testo = f"Cliente: {clientID}\n"
-        testo += "Prodotti:\n"
-        for i, qty in enumerate(Qvet):
-            if qty > 0:
-                testo += f"   - {self.impo.iloc[i]['prodotto']} x{int(qty)} - EUR {self.impo.iloc[i]['prezzo']*qty:.2f}\n"
-        testo += f"\nTotale: EUR {prezzoFattura:.2f}\n"
-        testo += f"Note: {note}\n"
-        testo += "\n" * 15
 
-        printer_name = "paninoteca"  
+        # printer_name = "paninoteca"
+        printer_name = "Microsoft Print to PDF"
 
         try:
-            hprinter = win32print.OpenPrinter(printer_name)
-            try:
-                hjob = win32print.StartDocPrinter(hprinter, 1, ("Scontrino", None, "RAW"))
-                win32print.StartPagePrinter(hprinter)
-                win32print.WritePrinter(hprinter, testo.encode("utf-8"))
-                win32print.EndPagePrinter(hprinter)
-                win32print.EndDocPrinter(hprinter)
-            finally:
-                win32print.ClosePrinter(hprinter)
+            # Controllo se la stampante esiste
+            printers = [p[2] for p in win32print.EnumPrinters(win32print.PRINTER_ENUM_LOCAL)]
+            if printer_name not in printers:
+                raise RuntimeError(f"Stampante '{printer_name}' non trovata")
+
+            dc = win32ui.CreateDC()
+            dc.CreatePrinterDC(printer_name)
+            dc.StartDoc("Scontrino Moderno")
+            dc.StartPage()
+
+            y = 50  # coordinata verticale iniziale
+
+            # === INTESTAZIONE ===
+            font_title = win32ui.CreateFont({"name": "Arial", "height": 50, "weight": 700})
+            dc.SelectObject(font_title)
+            dc.TextOut(0, y, "🍔 PANINOTECA REPAX 🍔")
+            y += 50
+
+
+            # linea decorativa
+            font_line = win32ui.CreateFont({"name": "Arial", "height": 25, "weight": 450})
+            dc.SelectObject(font_line)
+            dc.TextOut(70, y, "================================")
+            y += 50
+
+
+            # === DETTAGLI CLIENTE E PRODOTTI ===
+            font_body = win32ui.CreateFont({"name": "Arial", "height": 25, "weight": 450})
+            dc.SelectObject(font_body)
+
+            dc.TextOut(50, y, f"Cliente: {clientID}")
+            y += 35
+            dc.TextOut(50, y, "Prodotti:")
+            y += 30
+
+            for i, qty in enumerate(Qvet):
+                if qty > 0:
+                    prodotto = self.impo.iloc[i]['prodotto']
+                    prezzo = self.impo.iloc[i]['prezzo']*qty
+                    riga = f"• {prodotto:<20} x{int(qty):<2} EUR {prezzo:>5.2f}"
+                    dc.TextOut(70, y, riga)
+                    y += 30
+
+            # linea separatrice prima del totale
+            dc.TextOut(50, y, "---------------------------------------------")
+            y += 30
+
+            # === TOTALE ===
+            font_total = win32ui.CreateFont({"name": "Arial", "height": 25, "weight": 450})
+            dc.SelectObject(font_total)
+            dc.TextOut(50, y, f"Totale: EUR {prezzoFattura:.2f}")
+            y += 50
+
+            # === NOTE ===
+            font_note = win32ui.CreateFont({"name": "Arial", "height": 25, "weight": 450})
+            dc.SelectObject(font_note)
+            if note.strip():
+                dc.TextOut(50, y, f"Note: {note}")
+                y += 30
+
+            # === FINE DOCUMENTO ===
+            dc.EndPage()
+            dc.EndDoc()
+
         except Exception as e:
-            print(f"Errore di stampa: {e}")
+            print(f"Stampante non disponibile o errore di stampa: {e}")
+
+
+
+
 
 
 

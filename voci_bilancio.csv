@@ -1,0 +1,9 @@
+voci;tipi
+ricavi;entrata
+costi;uscita
+costi_fissi;uscita
+donazioni_ricevute;entrata
+cassa;bifase
+credito;bifase
+debito;bifase
+profitto_finale;   uscita
