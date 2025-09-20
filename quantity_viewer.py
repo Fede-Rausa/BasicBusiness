@@ -2,6 +2,7 @@ import tkinter as tk
 import pandas as pd
 from datetime import datetime
 import numpy as np
+from tkinter import messagebox 
 
 class QuantityViewer:
     def __init__(self, parent, root):
@@ -19,11 +20,21 @@ class QuantityViewer:
         self.base = tk.Frame(self.root)
         self.base.grid(row = 2, column = 1, pady = 3)
 
+        # Bind to window destruction
+        self.root.bind('<Destroy>', self.on_destroy)
+        self.destroyed = False
+
 
         self.importa_dati()
         self.load_impo()
         self.gen_rows0()
         self.setupUi()
+
+    def on_destroy(self, event):
+        # Mark as destroyed when window is closed
+        if event.widget == self.root:
+            self.destroyed = True
+
 
 
     def importa_dati(self):
@@ -64,8 +75,12 @@ class QuantityViewer:
         #retrieve last id
         #cli = np.array(self.dataset['cliente'])
         #last_id = cli[len(cli)-1]
-        self.dataset = self.dataset.reset_index()
-        last_id = self.dataset['cliente'].iloc[self.dataset.shape[0]-1]
+        self.dataset = self.dataset.reset_index(drop=True)
+        if self.dataset.shape[0] > 0:
+            last_id = self.dataset['cliente'].iloc[self.dataset.shape[0]-1]
+        else:
+            last_id = 'no orders in today\'s data'
+            messagebox.showwarning("ATTENZIONEEE", "Non hai ancora registrato nessun ordine oggi")
 
         #update head
         self.head_label.config(text = 'last order: ' + str(last_id) + '        last update: ' + time_lab, 
@@ -128,8 +143,16 @@ class QuantityViewer:
         time_lab = datetime.now().strftime(self.time_format)
 
         #retrieve last id
-        self.dataset = self.dataset.reset_index(drop=True) #solution for pandas ValueError: cannot insert level_0, already exists
-        last_id = self.dataset['cliente'].iloc[self.dataset.shape[0]-1] #use iloc before [] for indexing pd.df
+
+        # self.dataset = self.dataset.reset_index(drop=True) #solution for pandas ValueError: cannot insert level_0, already exists
+        # last_id = self.dataset['cliente'].iloc[self.dataset.shape[0]-1] #use iloc before [] for indexing pd.df
+
+        self.dataset = self.dataset.reset_index(drop=True)
+        if self.dataset.shape[0] > 0:
+            last_id = self.dataset['cliente'].iloc[self.dataset.shape[0]-1]
+        else:
+            last_id = 'no orders in the today\'s data'
+
 
         self.head_label.config(text='last order: ' + str(last_id) + '        last update: ' + time_lab,
                             font=("Arial", self.fontsize - 3))

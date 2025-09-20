@@ -139,45 +139,59 @@ class SalesManager:
 
 ################################################################################################ TOPLEVELS CLOSING
 
+
     def update_sv(self):
-        #self.parent.SV.gen_rows() #correct for just one sales viewer
         print('update sv called')
-
-        pop_ids = []
-        for i in range(len(self.parent.svlist)):  
-            sv = self.parent.svlist[i]
-            try:
-                sv.gen_rows()
-                #sv.update()
-            except Exception as e:
-                print('errore in update_sv')
-                print(e)
-                pop_ids.append(i)
-
-            #if (sv is not None):
-            #    sv.gen_rows()
-            #else:
-            #    pop_ids.append(i)
-        for i in pop_ids:
-            self.parent.svlist.pop(i)
+        self.parent.svlist = [sv for sv in self.parent.svlist if not sv.destroyed]
+        for sv in self.parent.svlist:  
+            sv.update()
 
     def update_qv(self):
+        print('update qv called')
+        self.parent.qvlist = [qv for qv in self.parent.qvlist if not qv.destroyed]
+        for qv in self.parent.qvlist:  
+            qv.update()
 
-        print('update sv called')
+    #old work, that has some bugs
+    # def update_sv(self):
+    #     #self.parent.SV.gen_rows() #correct for just one sales viewer
+    #     print('update sv called')
 
-        pop_ids = []
-        for i in range(len(self.parent.qvlist)):  
-            qv = self.parent.qvlist[i]
-            try:
-                #qv.gen_rows()
-                qv.update()
-            except Exception as e:
-                print('errore in update_qv')
-                print(e)
-                pop_ids.append(i)       
+    #     pop_ids = []
+    #     for i in range(len(self.parent.svlist)):  
+    #         sv = self.parent.svlist[i]
+    #         try:
+    #             sv.gen_rows()
+    #             #sv.update()
+    #         except Exception as e:
+    #             print('errore in update_sv')
+    #             print(e)
+    #             pop_ids.append(i)
 
-        for i in pop_ids:
-            self.parent.qvlist.pop(i)               
+    #         #if (sv is not None):
+    #         #    sv.gen_rows()
+    #         #else:
+    #         #    pop_ids.append(i)
+    #     for i in pop_ids:
+    #         self.parent.svlist.pop(i)
+
+    # def update_qv(self):
+
+    #     print('update qv called')
+
+    #     pop_ids = []
+    #     for i in range(len(self.parent.qvlist)):  
+    #         qv = self.parent.qvlist[i]
+    #         try:
+    #             #qv.gen_rows()
+    #             qv.update()
+    #         except Exception as e:
+    #             print('errore in update_qv')
+    #             print(e)
+    #             pop_ids.append(i)       
+
+    #     for i in pop_ids:
+    #         self.parent.qvlist.pop(i)               
 
 
 
@@ -612,34 +626,86 @@ class SalesManager:
     def stampa_fattura(self):
         import win32print
         import win32ui
-        
+        import win32con
+        from PIL import Image, ImageWin
+
         Qvet, Svet, Pvet, sconto, sconto0, discount_c, prezzoBase, prezzoFattura = self.calcola_fattura()
         clientID = self.NOME.get()
         note = self.NOTE.get("1.0","end").replace("\n", "")
         
-        testo = f"Cliente: {clientID}\n"
-        testo += "Prodotti:\n"
-        for i, qty in enumerate(Qvet):
-            if qty > 0:
-                testo += f"   - {self.impo.iloc[i]['prodotto']} x{int(qty)} - EUR {self.impo.iloc[i]['prezzo']*qty:.2f}\n"
-        testo += f"\nTotale: EUR {prezzoFattura:.2f}\n"
-        testo += f"Note: {note}\n"
-        testo += "\n" * 15
-
-        printer_name = "paninoteca"  
+        printer_name = "paninoteca"   #to print with the thermal printer
+        # printer_name = "Microsoft Print to PDF"    #to create a pdf file
 
         try:
-            hprinter = win32print.OpenPrinter(printer_name)
-            try:
-                hjob = win32print.StartDocPrinter(hprinter, 1, ("Scontrino", None, "RAW"))
-                win32print.StartPagePrinter(hprinter)
-                win32print.WritePrinter(hprinter, testo.encode("utf-8"))
-                win32print.EndPagePrinter(hprinter)
-                win32print.EndDocPrinter(hprinter)
-            finally:
-                win32print.ClosePrinter(hprinter)
+            # Controllo se la stampante esiste
+            printers = [p[2] for p in win32print.EnumPrinters(win32print.PRINTER_ENUM_LOCAL)]
+            if printer_name not in printers:
+                raise RuntimeError(f"Stampante '{printer_name}' non trovata")
+
+            dc = win32ui.CreateDC()
+            dc.CreatePrinterDC(printer_name)
+            dc.StartDoc("Scontrino Moderno")
+            dc.StartPage()
+
+            y = 50  # coordinata verticale iniziale
+
+            # === INTESTAZIONE ===
+            font_title = win32ui.CreateFont({"name": "Arial", "height": 50, "weight": 700})
+            dc.SelectObject(font_title)
+            dc.TextOut(0, y, "🍔 PANINOTECA REPAX 🍔")
+            y += 50
+
+
+            # linea decorativa
+            font_line = win32ui.CreateFont({"name": "Arial", "height": 25, "weight": 450})
+            dc.SelectObject(font_line)
+            dc.TextOut(70, y, "================================")
+            y += 50
+
+
+            # === DETTAGLI CLIENTE E PRODOTTI ===
+            font_body = win32ui.CreateFont({"name": "Arial", "height": 25, "weight": 450})
+            dc.SelectObject(font_body)
+
+            dc.TextOut(50, y, f"Cliente: {clientID}")
+            y += 35
+            dc.TextOut(50, y, "Prodotti:")
+            y += 30
+
+            for i, qty in enumerate(Qvet):
+                if qty > 0:
+                    prodotto = self.impo.iloc[i]['prodotto']
+                    prezzo = self.impo.iloc[i]['prezzo']*qty
+                    riga = f"• {prodotto:<20} x{int(qty):<2} EUR {prezzo:>5.2f}"
+                    dc.TextOut(70, y, riga)
+                    y += 30
+
+            # linea separatrice prima del totale
+            dc.TextOut(50, y, "---------------------------------------------")
+            y += 30
+
+            # === TOTALE ===
+            font_total = win32ui.CreateFont({"name": "Arial", "height": 25, "weight": 450})
+            dc.SelectObject(font_total)
+            dc.TextOut(50, y, f"Totale: EUR {prezzoFattura:.2f}")
+            y += 50
+
+            # === NOTE ===
+            font_note = win32ui.CreateFont({"name": "Arial", "height": 25, "weight": 450})
+            dc.SelectObject(font_note)
+            if note.strip():
+                dc.TextOut(50, y, f"Note: {note}")
+                y += 30
+
+            # === FINE DOCUMENTO ===
+            dc.EndPage()
+            dc.EndDoc()
+
         except Exception as e:
-            print(f"Errore di stampa: {e}")
+            print(f"Stampante non disponibile o errore di stampa: {e}")
+
+
+
 
 
 
@@ -854,16 +920,18 @@ class SalesManager:
         parent = self.parent
         windowB = tk.Toplevel(self.root)
         parent.qvlist.append(parent.QuantityViewer(parent, windowB))
-        for qv in parent.qvlist:
-            qv.update()
+        self.update_qv()
+        # for qv in parent.qvlist:
+        #     qv.update()
     
     def apri_panel(self):
         parent = self.parent
         windowB = tk.Toplevel(self.root)
-        #parent.SV = parent.SalesViewer(parent, windowB)
         parent.svlist.append(parent.SalesViewer(parent, windowB))
-        for sv in parent.svlist:
-            sv.update()
+        self.update_sv()
+        # for sv in parent.svlist:
+        #     sv.update()
+        #parent.SV = parent.SalesViewer(parent, windowB)
         #parent.SV.update()
 
 

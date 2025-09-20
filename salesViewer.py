@@ -11,11 +11,25 @@ class SalesViewer:
         self.keepHeaders = ['status', 'cliente']
         self.opts = ['TODO', 'DONE', 'STBY']
 
+        # Bind to window destruction
+        self.root.bind('<Destroy>', self.on_destroy)
+        self.destroyed = False
+
         self.setupUi()
+        self.importa_dati()
         #self.update()
 
+    def on_destroy(self, event):
+        # Mark as destroyed when window is closed
+        if event.widget == self.root:
+            self.destroyed = True
+
+
     def importa_dati(self):
-        self.dataset = pd.read_csv(self.path_dataset, sep=';', decimal=',')
+        #old safe way
+        #self.dataset = pd.read_csv(self.path_dataset, sep=';', decimal=',')
+        #new fast way
+        self.dataset = self.parent.SM.dataset.copy()
         
     def setupUi(self):
 
@@ -60,11 +74,12 @@ class SalesViewer:
         try:
             self.lista_righe.delete(0, tk.END)
         except:
-            if self.root.winfo_exists():
-                print("Error deleting items from listbox, it may not be initialized yet.")
-                return 
-            else:
-                print('the window is destroyed')
+            #if self.root.winfo_exists():
+            print("Error deleting items from listbox, it may not be initialized yet.")
+            return 
+            #else:
+            #    print('the window is destroyed')
+            #    return
 
         # control font of panel text
         self.lista_righe.config(font=('Calibri', int(self.parent.SM.spinfont.get())))
