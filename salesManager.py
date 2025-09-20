@@ -1212,6 +1212,7 @@ class SalesManager:
             axs1[0][1].table(cellText = pivoTab.values, rowLabels = pivoTab.index, colLabels=pivoTab.columns, loc ='center')
 
 
+
             #pie chart
 
             #df1 = self.dataset[self.impo['prodotto']]
@@ -1225,6 +1226,38 @@ class SalesManager:
             axs1[0][0].set_title('ventite totali')
             # Extract colors from the pie chart wedges
             colors = [wedge.get_facecolor() for wedge in wedges]
+            # Create a color mapping dictionary: label -> color
+            color_dict = dict(zip(prod_names, colors))
+
+
+            #line plot
+            import matplotlib.dates as mdates
+            #axs1[1][0].axis('off')
+            # First, transpose the dataframe so dates become rows and labels become columns
+            df = pivoTab.copy()
+            df= df.drop('TOT', axis=1)
+            df_transposed = df.T
+            df_transposed = df_transposed[prod_names]
+            tformat = '%Y-%m-%d'
+            # Convert the index (dates) from string to datetime objects
+            df_transposed.index = pd.to_datetime(df_transposed.index, format=tformat)
+            # Sort the index to ensure dates are in chronological order
+            df_transposed = df_transposed.sort_index()
+            # Plot each label as a separate line
+            for label in df_transposed.columns:
+                axs1[1][0].plot(df_transposed.index, df_transposed[label], label=label, 
+                                color=color_dict[label], marker='o')
+            # Format the x-axis to display dates nicely
+            axs1[1][0].xaxis.set_major_formatter(mdates.DateFormatter('%d/%m/%Y'))
+            axs1[1][0].xaxis.set_major_locator(mdates.AutoDateLocator())
+            axs1[1][0].tick_params(axis='x', rotation=45)
+            axs1[1][0].set_title('product sales over time')
+            axs1[1][0].set_xlabel('date')
+            axs1[1][0].set_ylabel('prod quantity')
+
+
+
+
 
             # barplot 
             # prod_names = self.impo['prodotto'] 
@@ -1236,8 +1269,11 @@ class SalesManager:
 
             y_pos = np.arange(len(prod_names))
 
-            
-            axs1[1][0].axis('off')
+            #axs1[1][0].axis('off')
+
+
+
+
             axs1[1][1].clear()
             #axs1[1][1] = sns.barplot(df_barplot, y='product', x='quantity', hue='product', orient='h')
             axs1[1][1].barh(y_pos, totali, tick_label=prod_names, color = colors)
@@ -1405,7 +1441,7 @@ class SalesManager:
             axs2[1][0].set_title('ricavi per giorni')
             axs2[1][0].set_xlabel('date')
             axs2[1][0].set_ylabel('revenue')
-
+            axs2[1][0].tick_params(axis='x', rotation=45)
 
             axs2[0][0].clear()
             axs2[0][0].axis('off')

@@ -34,8 +34,6 @@ class SalesTask:
         #self.svlist.append(SalesViewer(self, tk.Toplevel(root)))
         #self.update_sv()
 
-
-
         root.protocol("WM_DELETE_WINDOW", self.on_closing)
 
     # def update_sv(self):   #update the sales viewers
