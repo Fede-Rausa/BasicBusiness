@@ -1051,94 +1051,134 @@ class SalesManager:
         # self.canvas.draw()
         # self.canvas.get_tk_widget().pack(pady=10, padx=10, fill=tk.BOTH)
 
+        
+        # fig1 , axs1 = plt.subplots(2, 2, figsize=(15, 12))
+        # fig1.subplots_adjust(wspace=0.3, hspace=0.3)
+        # fig2, axs2 = plt.subplots(2,2, figsize=(15,12))
+        # fig2.subplots_adjust(wspace=0.2, hspace=0.3)
+        # fig3, axs3 = plt.subplots(1,1, figsize=(15,12))
+        # fig4, axs4 = plt.subplots(1,2, figsize=(15,8))
+        # fig4.subplots_adjust(wspace=1, hspace=0)
+        # canv1 = FigureCanvasTkAgg(fig1, master=self.plot_frame)
+        # canv1.draw()
+        # canv1.get_tk_widget().pack(pady=10, padx=10, fill=tk.BOTH)
+        # canv2 = FigureCanvasTkAgg(fig2, master=self.plot_frame)
+        # canv2.draw()
+        # canv2.get_tk_widget().pack(pady=10, padx=10, fill=tk.BOTH)
+        # canv3 = FigureCanvasTkAgg(fig3, master=self.plot_frame)
+        # canv3.draw()
+        # canv3.get_tk_widget().pack(pady=10, padx=10, fill=tk.BOTH)
+        # canv4 = FigureCanvasTkAgg(fig4, master=self.plot_frame)
+        # canv4.draw()
+        # canv4.get_tk_widget().pack(pady=10, padx=10, fill=tk.BOTH)
+
+        # self.axs_list = axs1, axs2, axs3, axs4
+        # self.canv_list = canv1, canv2, canv3, canv4
+        ["prod_sales", "day_revenue", "prod_table", 'prod_totals']
+
+        dizio = {
+            'prod_totals' : {'subplots': (1,2) , 'space':(1, 1), 'size': (15,8), 'axs':None, 'canvas':None , 'fun': self.prod_charts},
+            'prod_sales' : {'subplots': (2,2) , 'space':(0.6, 0.3), 'size': (15,15), 'axs':None, 'canvas':None , 'fun': self.prod_table_charts},
+            'prod_table' : {'subplots': (1,1) , 'space':(0.3, 0.3), 'size': (15, 10), 'axs':None, 'canvas':None , 'fun': self.prod_table},
+            'prod_time_series' : {'subplots': (1,1) , 'space':(0.3, 0.3), 'size': (15,8), 'axs':None, 'canvas':None , 'fun': self.prod_tseries},
+            'category_sales' : {'subplots': (2,2) , 'space':(0.3, 0.3), 'size': (15,12), 'axs':None, 'canvas':None , 'fun': self.category_charts},
+            'day_revenue' : {'subplots': (2,2) , 'space':(0.3, 0.3), 'size': (15,12), 'axs':None, 'canvas':None , 'fun': self.day_charts}
+        }
+
+        #specific plot parameters
+        self.prod_color = None
+        self.prod_ts_series_legend = False
 
         #new work
         report_lab = tk.Label(self.report_frame, font=('Arial', 14))
         report_lab.pack(side=tk.TOP, pady=10)
         
         self.plot_id = ctk.StringVar(value="prod_totals")
-        report_dd = ctk.CTkComboBox(self.report_frame, values=["prod_sales", "day_revenue", "prod_table", 'prod_totals'],
+        report_dd = ctk.CTkComboBox(self.report_frame, values=list(dizio.keys()),
                                             command=self.call_plot, variable=self.plot_id)
         
         self.plot_id.set("prod_totals")
         report_dd.pack(side=tk.TOP, pady=10)
 
-
         self.report_labs = report_lab
 
-        
-        fig1 , axs1 = plt.subplots(2, 2, figsize=(15, 12))
-        fig1.subplots_adjust(wspace=0.3, hspace=0.3)
-        fig2, axs2 = plt.subplots(2,2, figsize=(15,12))
-        fig2.subplots_adjust(wspace=0.2, hspace=0.3)
-        fig3, axs3 = plt.subplots(1,1, figsize=(15,12))
-        fig4, axs4 = plt.subplots(1,2, figsize=(15,8))
-        fig4.subplots_adjust(wspace=1, hspace=0)
-        canv1 = FigureCanvasTkAgg(fig1, master=self.plot_frame)
-        canv1.draw()
-        canv1.get_tk_widget().pack(pady=10, padx=10, fill=tk.BOTH)
-        canv2 = FigureCanvasTkAgg(fig2, master=self.plot_frame)
-        canv2.draw()
-        canv2.get_tk_widget().pack(pady=10, padx=10, fill=tk.BOTH)
-        canv3 = FigureCanvasTkAgg(fig3, master=self.plot_frame)
-        canv3.draw()
-        canv3.get_tk_widget().pack(pady=10, padx=10, fill=tk.BOTH)
-        canv4 = FigureCanvasTkAgg(fig4, master=self.plot_frame)
-        canv4.draw()
-        canv4.get_tk_widget().pack(pady=10, padx=10, fill=tk.BOTH)
 
-        self.axs_list = axs1, axs2, axs3, axs4
-        self.canv_list = canv1, canv2, canv3, canv4
-        
+       # setup plots
+        for p in list(dizio.keys()):
+            print(p)
+            dp = dizio[p]
+            fig , axs = plt.subplots(dp['subplots'][0], dp['subplots'][1], figsize=dp['size'])
+            fig.subplots_adjust(wspace=dp['space'][0], hspace=dp['space'][1])
+            canv = FigureCanvasTkAgg(fig, master=self.plot_frame)
+            canv.draw()
+            canv.get_tk_widget().pack(pady=1, padx=1, fill=tk.BOTH)
+            dizio[p]['axs'] = axs
+            dizio[p]['canvas'] = canv
 
-    #     dizio = {
-    #         'prods' : {'subplots': (1,2) , 'space':(0.3, 0.3), 'size': (15,12), 'axs':None, 'canvas':None , 'fun': self.prod_charts},
-    #         'days' : {'subplots': (1,1) , 'space':(0.3, 0.3), 'size': (15,12),'axs':None, 'canvas':None , 'fun': self.day_charts}
-    #     }
+        self.plot_dict = dizio
 
-    #    # setup plots
-    #     for p in np.array(dizio.keys()):
-    #         print(p)
-    #         dp = dizio[p]
-    #         fig , axs = plt.subplots(dp['subplots'][0], dp['subplots'][1], figsize=dp['size'])
-    #         fig.subplots_adjust(wspace=dp['space'][0], hspace=dp['space'][1])
-    #         canv = FigureCanvasTkAgg(fig, master=self.plot_frame)
-    #         canv.draw()
-    #         canv.get_tk_widget().pack(pady=1, padx=1, fill=tk.BOTH)
-    #         dizio[p]['axs'] = axs
-    #         dizio[p]['canvas'] = canv
-
-    #     self.plot_dict = dizio
-
-    # def select_plot(self, plot_id):
-    #     plot_ids = list(self.plot_dict.keys())
-    #     for i in plot_ids:
-    #         canv = self.plot_dict[i]['canvas']
-    #         if i == plot_id:
-    #             canv.get_tk_widget().pack(pady=10, padx=10, fill=tk.BOTH)
-    #         else:
-    #             canv.get_tk_widget().pack_forget()
-
-
-    # def call_plot0(self, plot_id):
-    #     self.select_plot(plot_id)
-    #     plfun = self.plot_dict[plot_id]['fun']
-    #     plfun()
+    def select_plot(self, plot_id):
+        plot_ids = list(self.plot_dict.keys())
+        for i in plot_ids:
+            canv = self.plot_dict[i]['canvas']
+            if i == plot_id:
+                canv.get_tk_widget().pack(pady=10, padx=10, fill=tk.BOTH)
+            else:
+                canv.get_tk_widget().pack_forget()
 
 
     def call_plot(self, plot_id):
+        self.select_plot(plot_id)
+        plfun = self.plot_dict[plot_id]['fun']
+        plaxs = self.plot_dict[plot_id]['axs']
+        plcanv = self.plot_dict[plot_id]['canvas']
+        plfun(plaxs)
+        plcanv.draw()
 
-        if plot_id == 'prod_sales':
-            self.prod_table_charts()
 
-        if plot_id == 'prod_totals':
-            self.prod_charts()
+    def plotta(self):
+        #self.hideshowplot(True)
+        self.show_frame('plot')
+        self.build_report()
+        self.call_plot(self.plot_id.get())
 
-        if plot_id == 'prod_table':
-            self.prod_table()
 
-        if plot_id == 'day_revenue':
-            self.day_charts()
+
+        #old good work
+        # self.build_report()
+        # self.info_chart2()
+        # self.pie_chart()
+        # self.table_chart()
+        # self.barplot_chart()
+        
+        # self.axs[0][1].axis('off')
+        # self.axs[1][1].axis('off')
+        # self.axs[2][1].axis('off')
+
+
+        #new work
+        #self.build_report()
+        #self.prod_charts()
+        #self.day_charts()
+
+        
+        #self.canvas.draw()
+
+
+
+    # def call_plot(self, plot_id):
+
+    #     if plot_id == 'prod_sales':
+    #         self.prod_table_charts()
+
+    #     if plot_id == 'prod_totals':
+    #         self.prod_charts()
+
+    #     if plot_id == 'prod_table':
+    #         self.prod_table()
+
+    #     if plot_id == 'day_revenue':
+    #         self.day_charts()
 
 
 
@@ -1157,15 +1197,15 @@ class SalesManager:
                          + '#CLIENTI: ' + str(tot_orders)+ '\n'
                          + '#VENDUTO: ' + str(tot_quantity)  )
 
-    def prod_table_charts(self):
+    def prod_table_charts(self, axs1):
 
-        axs1 , axs2, axs3, axs4 = self.axs_list       # = self.axs_list#, axs2, axs3 = self.axs_list
-        canv1, canv2, canv3, canv4 = self.canv_list   # = self.canv_list#, canv2, canv3 = self.canv_list
+        # axs1 , axs2, axs3, axs4 = self.axs_list       # = self.axs_list#, axs2, axs3 = self.axs_list
+        # canv1, canv2, canv3, canv4 = self.canv_list   # = self.canv_list#, canv2, canv3 = self.canv_list
 
-        canv2.get_tk_widget().pack_forget()
-        canv3.get_tk_widget().pack_forget()
-        canv4.get_tk_widget().pack_forget()
-        canv1.get_tk_widget().pack(pady=10, padx=10, fill=tk.BOTH)
+        # canv2.get_tk_widget().pack_forget()
+        # canv3.get_tk_widget().pack_forget()
+        # canv4.get_tk_widget().pack_forget()
+        # canv1.get_tk_widget().pack(pady=10, padx=10, fill=tk.BOTH)
 
         if (len(self.dataset) > 2):
 
@@ -1190,15 +1230,15 @@ class SalesManager:
                                             aggfunc='sum',
                                             sort=False).T
 
-            for c in self.used_cats:
-                nomi = np.array(self.impo['prodotto'])[self.impo['categoria']==c].tolist()
-                pivoTab_p = df.pivot_table(index = 'date', 
-                                                values = nomi,
-                                                aggfunc='sum',
-                                                sort=False).T
-                newrow = pivoTab_p.sum(axis=0)
-                newrow.name = 'tot' + c
-                pivoTab = pd.concat([pivoTab, newrow.to_frame().T])
+            # for c in self.used_cats:
+            #     nomi = np.array(self.impo['prodotto'])[self.impo['categoria']==c].tolist()
+            #     pivoTab_p = df.pivot_table(index = 'date', 
+            #                                     values = nomi,
+            #                                     aggfunc='sum',
+            #                                     sort=False).T
+            #     newrow = pivoTab_p.sum(axis=0)
+            #     newrow.name = 'tot' + c
+            #     pivoTab = pd.concat([pivoTab, newrow.to_frame().T])
 
             ####totale di ogni voce
             pivoTab = pivoTab.assign(TOT = pivoTab.sum(axis=1))
@@ -1228,6 +1268,7 @@ class SalesManager:
             colors = [wedge.get_facecolor() for wedge in wedges]
             # Create a color mapping dictionary: label -> color
             color_dict = dict(zip(prod_names, colors))
+            self.prod_color = color_dict
 
 
             #line plot
@@ -1281,18 +1322,84 @@ class SalesManager:
             axs1[1][1].set_xlabel('quantity')
             axs1[1][1].set_ylabel('product')
  
-            canv1.draw()
+            #canv1.draw()
 
 
-    def prod_charts(self):
+    def prod_tseries(self, axs):
+        if (len(self.dataset) > 2):
 
-        axs1 , axs2, axs3, axs4 = self.axs_list       # = self.axs_list#, axs2, axs3 = self.axs_list
-        canv1, canv2, canv3, canv4 = self.canv_list   # = self.canv_list#, canv2, canv3 = self.canv_list
+            prod_names = self.impo['prodotto']
 
-        canv2.get_tk_widget().pack_forget()
-        canv3.get_tk_widget().pack_forget()
-        canv1.get_tk_widget().pack_forget()
-        canv4.get_tk_widget().pack(pady=10, padx=10, fill=tk.BOTH)
+            colonne = list(self.impo['prodotto']) #+ ['sconto', 'prezzo']
+            for c in colonne:
+                self.dataset[c] = pd.to_numeric(self.dataset[c])
+
+
+            df = self.dataset.copy()
+            if (df['ts'][0] == '0') or (df['ts'][0] == 0):
+               df = df.drop([0])
+
+            #filter data by today 
+            tformat = "%Y-%m-%d %H:%M:%S.%f"   #2025-09-17 14:39:40.405671
+            ts = [datetime.strptime(s, tformat).date() for s in  df['ts']]
+            df['date'] = ts
+
+            # df['date'] = self.dataset['ts']
+
+            pivoTab = df.pivot_table(index = 'date', 
+                                            values = colonne,
+                                            aggfunc='sum',
+                                            sort=False).T
+
+
+
+            #line plot
+            import matplotlib.dates as mdates
+            #axs1[1][0].axis('off')
+            # First, transpose the dataframe so dates become rows and labels become columns
+            df = pivoTab
+            df_transposed = df.T
+            df_transposed = df_transposed[prod_names]
+            tformat = '%Y-%m-%d'
+            # Convert the index (dates) from string to datetime objects
+            df_transposed.index = pd.to_datetime(df_transposed.index, format=tformat)
+            # Sort the index to ensure dates are in chronological order
+            df_transposed = df_transposed.sort_index()
+            # Plot each label as a separate line
+            if self.prod_color is not None:
+                color_dict = self.prod_color
+                for label in df_transposed.columns:
+                    axs.plot(df_transposed.index, df_transposed[label], label=label, 
+                                    color=color_dict[label], marker='o')
+            else:
+                for label in df_transposed.columns:
+                    axs.plot(df_transposed.index, df_transposed[label], label=label, marker='o')
+
+            # Format the x-axis to display dates nicely
+            axs.xaxis.set_major_formatter(mdates.DateFormatter('%d/%m/%Y'))
+            axs.xaxis.set_major_locator(mdates.AutoDateLocator())
+            axs.tick_params(axis='x', rotation=45)
+            axs.set_title('product sales over time')
+            axs.set_xlabel('date')
+            axs.set_ylabel('prod quantity')
+
+            if not self.prod_ts_series_legend:
+                axs.legend(loc='upper right')
+                self.prod_ts_series_legend = True
+
+
+
+
+
+    def prod_charts(self, axs4):
+
+        # axs1 , axs2, axs3, axs4 = self.axs_list       # = self.axs_list#, axs2, axs3 = self.axs_list
+        # canv1, canv2, canv3, canv4 = self.canv_list   # = self.canv_list#, canv2, canv3 = self.canv_list
+
+        # canv2.get_tk_widget().pack_forget()
+        # canv3.get_tk_widget().pack_forget()
+        # canv1.get_tk_widget().pack_forget()
+        # canv4.get_tk_widget().pack(pady=10, padx=10, fill=tk.BOTH)
 
 
 
@@ -1310,7 +1417,8 @@ class SalesManager:
             axs4[0].set_title('ventite totali')
             # Extract colors from the pie chart wedges
             colors = [wedge.get_facecolor() for wedge in wedges]
-
+            color_dict = dict(zip(prod_names, colors))
+            self.prod_color = color_dict
 
             y_pos = np.arange(len(prod_names))
 
@@ -1330,19 +1438,18 @@ class SalesManager:
             axs4[1].set_xlabel('quantity')
             axs4[1].set_ylabel('product')
 
-            canv4.draw()
+            #canv4.draw()
 
 
 
+    def prod_table(self, axs3):
+        # axs1 , axs2, axs3, axs4 = self.axs_list# = self.axs_list#, axs2, axs3 = self.axs_list
+        # canv1, canv2, canv3, canv4 = self.canv_list# = self.canv_list#, canv2, canv3 = self.canv_list
 
-    def prod_table(self):
-        axs1 , axs2, axs3, axs4 = self.axs_list# = self.axs_list#, axs2, axs3 = self.axs_list
-        canv1, canv2, canv3, canv4 = self.canv_list# = self.canv_list#, canv2, canv3 = self.canv_list
-
-        canv2.get_tk_widget().pack_forget()
-        canv1.get_tk_widget().pack_forget()
-        canv4.get_tk_widget().pack_forget()
-        canv3.get_tk_widget().pack(pady=10, padx=10, fill=tk.BOTH)
+        # canv2.get_tk_widget().pack_forget()
+        # canv1.get_tk_widget().pack_forget()
+        # canv4.get_tk_widget().pack_forget()
+        # canv3.get_tk_widget().pack(pady=10, padx=10, fill=tk.BOTH)
 
         if (len(self.dataset) > 0):
 
@@ -1389,17 +1496,147 @@ class SalesManager:
             axs3.table(cellText = pivoTab.values, rowLabels = pivoTab.index, colLabels=pivoTab.columns, loc ='center')
 
 
+    def category_charts(self, axs1):
 
-    def day_charts(self):
+        # axs1 , axs2, axs3, axs4 = self.axs_list       # = self.axs_list#, axs2, axs3 = self.axs_list
+        # canv1, canv2, canv3, canv4 = self.canv_list   # = self.canv_list#, canv2, canv3 = self.canv_list
+
+        # canv2.get_tk_widget().pack_forget()
+        # canv3.get_tk_widget().pack_forget()
+        # canv4.get_tk_widget().pack_forget()
+        # canv1.get_tk_widget().pack(pady=10, padx=10, fill=tk.BOTH)
+
+        if (len(self.dataset) > 2):
+
+            colonne = list(self.impo['prodotto']) #+ ['sconto', 'prezzo']
+            for c in colonne:
+                self.dataset[c] = pd.to_numeric(self.dataset[c])
+
+
+            df = self.dataset.copy()
+            if (df['ts'][0] == '0') or (df['ts'][0] == 0):
+               df = df.drop([0])
+
+            #filter data by today 
+            tformat = "%Y-%m-%d %H:%M:%S.%f"   #2025-09-17 14:39:40.405671
+            ts = [datetime.strptime(s, tformat).date() for s in  df['ts']]
+            df['date'] = ts
+
+            # df['date'] = self.dataset['ts']
+
+            pivoTab = df.pivot_table(index = 'date', 
+                                            values = colonne,
+                                            aggfunc='sum',
+                                            sort=False).T
+
+            for c in self.used_cats:
+                nomi = np.array(self.impo['prodotto'])[self.impo['categoria']==c].tolist()
+                pivoTab_p = df.pivot_table(index = 'date', 
+                                                values = nomi,
+                                                aggfunc='sum',
+                                                sort=False).T
+                newrow = pivoTab_p.sum(axis=0)
+                newrow.name = c
+                pivoTab = pd.concat([pivoTab, newrow.to_frame().T])
+
+            ####totale di ogni voce
+            pivoTab = pivoTab.assign(TOT = pivoTab.sum(axis=1))
+            
+            pivoTab = pivoTab.loc[self.used_cats]
+
+            #####creazione tabella
+            for c in pivoTab.columns:
+                    pivoTab[c] = pivoTab[c].astype(int)
+
+            axs1[0][1].clear()
+            axs1[0][1].axis('off')
+            axs1[0][1].table(cellText = pivoTab.values, rowLabels = pivoTab.index, colLabels=pivoTab.columns, loc ='center')
+
+
+
+            #pie chart
+
+            #df1 = self.dataset[self.impo['prodotto']]
+            #totali = [df1[prod].astype(int).sum() for prod in self.impo['prodotto']]
+            #prod_names = self.impo['prodotto']
+
+            totali = pivoTab['TOT']
+
+
+            axs1[0][0].clear()
+            wedges, texts, autotexts = axs1[0][0].pie(totali, labels = self.used_cats, startangle=45, autopct='%1.1f%%')#,pctdistance=1.25, labeldistance=.6) #autopct=absolute_value)
+            axs1[0][0].set_title('ventite totali')
+            # Extract colors from the pie chart wedges
+            colors = [wedge.get_facecolor() for wedge in wedges]
+            # Create a color mapping dictionary: label -> color
+            color_dict = dict(zip(self.used_cats, colors))
+
+
+            #line plot
+            import matplotlib.dates as mdates
+            #axs1[1][0].axis('off')
+            # First, transpose the dataframe so dates become rows and labels become columns
+            df = pivoTab.copy()
+            df= df.drop('TOT', axis=1)
+            df_transposed = df.T
+            df_transposed = df_transposed[self.used_cats]
+            tformat = '%Y-%m-%d'
+            # Convert the index (dates) from string to datetime objects
+            df_transposed.index = pd.to_datetime(df_transposed.index, format=tformat)
+            # Sort the index to ensure dates are in chronological order
+            df_transposed = df_transposed.sort_index()
+            # Plot each label as a separate line
+            for label in df_transposed.columns:
+                axs1[1][0].plot(df_transposed.index, df_transposed[label], label=label, 
+                                color=color_dict[label], marker='o')
+            # Format the x-axis to display dates nicely
+            axs1[1][0].xaxis.set_major_formatter(mdates.DateFormatter('%d/%m/%Y'))
+            axs1[1][0].xaxis.set_major_locator(mdates.AutoDateLocator())
+            axs1[1][0].tick_params(axis='x', rotation=45)
+            axs1[1][0].set_title('category sales over time')
+            axs1[1][0].set_xlabel('date')
+            axs1[1][0].set_ylabel('prod quantity')
+
+
+
+
+
+            # barplot 
+            # prod_names = self.impo['prodotto'] 
+            # prod_q = []
+            # for p in prod_names:
+            #     prod_q.append(self.dataset[p].astype(int).sum())
+
+            #df_barplot = pd.DataFrame({'product':prod_names, 'quantity': totali})
+
+            y_pos = np.arange(len(self.used_cats))
+
+            #axs1[1][0].axis('off')
+
+
+
+
+            axs1[1][1].clear()
+            #axs1[1][1] = sns.barplot(df_barplot, y='product', x='quantity', hue='product', orient='h')
+            axs1[1][1].barh(y_pos, totali, tick_label=self.used_cats, color = colors)
+            axs1[1][1].set_yticks(y_pos, labels=self.used_cats)
+            axs1[1][1].set_xlabel('quantity')
+            axs1[1][1].set_ylabel('product')
+ 
+            #canv1.draw()
+
+
+
+    def day_charts(self, axs2):
         if (len(self.dataset) > 0):
 
-            axs1 , axs2, axs3, axs4 = self.axs_list# = self.axs_list#, axs2, axs3 = self.axs_list
-            canv1, canv2, canv3, canv4 = self.canv_list# = self.canv_list#, canv2, canv3 = self.canv_list
+            # axs1 , axs2, axs3, axs4 = self.axs_list# = self.axs_list#, axs2, axs3 = self.axs_list
+            # canv1, canv2, canv3, canv4 = self.canv_list# = self.canv_list#, canv2, canv3 = self.canv_list
 
-            canv1.get_tk_widget().pack_forget()
-            canv3.get_tk_widget().pack_forget()
-            canv4.get_tk_widget().pack_forget()
-            canv2.get_tk_widget().pack(pady=10, padx=10, fill=tk.BOTH)
+            # canv1.get_tk_widget().pack_forget()
+            # canv3.get_tk_widget().pack_forget()
+            # canv4.get_tk_widget().pack_forget()
+            # canv2.get_tk_widget().pack(pady=10, padx=10, fill=tk.BOTH)
 
 
             #get data
@@ -1478,7 +1715,7 @@ class SalesManager:
             axs2[0][1].table(cellText = tab.values, rowLabels = tab.index, colLabels=tab.columns, loc ='center')
 
 
-            canv2.draw()
+            #canv2.draw()
 
 
     def pie_chart(self):
@@ -1685,33 +1922,6 @@ class SalesManager:
 
 
 
-    def plotta(self):
-        #self.hideshowplot(True)
-        self.show_frame('plot')
-        self.build_report()
-        self.call_plot(self.plot_id.get())
-
-
-
-        #old good work
-        # self.build_report()
-        # self.info_chart2()
-        # self.pie_chart()
-        # self.table_chart()
-        # self.barplot_chart()
-        
-        # self.axs[0][1].axis('off')
-        # self.axs[1][1].axis('off')
-        # self.axs[2][1].axis('off')
-
-
-        #new work
-        #self.build_report()
-        #self.prod_charts()
-        #self.day_charts()
-
-        
-        #self.canvas.draw()
 
 
 
