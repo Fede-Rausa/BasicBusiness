@@ -62,7 +62,7 @@ class SalesViewer:
         crow = row.drop(self.basicHeaders)
         qstr = ' '
         for i in range(len(crow)):
-            if crow[i] != 0:
+            if int(crow[i]) > 0 :
                 qstr = (qstr + ' __ ' + crow.index[i].upper() + ': ' +str(crow[i]))
         qstr = cliente_status + " | " + qstr
         return qstr
