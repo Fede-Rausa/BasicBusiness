@@ -7,8 +7,17 @@ import datetime as dt
 import os
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import matplotlib.dates as mdates
 from help import testoHelp
 from datetime import datetime
+import json
+import win32print
+import win32ui
+import win32con
+from PIL import Image, ImageWin
+from tkinter import font
+from tkinter import messagebox 
+
 # import seaborn as sns
 
 class SalesManager:
@@ -21,11 +30,13 @@ class SalesManager:
         self.path_dataset = "datiCassa.csv"
         self.path_impo = "impostazioniCassa.csv"
         self.path_sconti = "scontiCassa.csv"
+        self.path_printer = "printerFormat.json"
 
         self.basicHeaders = np.array(['cliente', 'status', 'scontoSpeciale', 'sconto', 'prezzo', 'giorno', 'ts', 'NOTE'])
         self.opts = ['TODO', 'DONE', 'STBY']
         self.cats = ['Panini', 'Contorni', 'Bibite', 'Dolci', 'Frutta', 'Drink', 'Primi', 'Secondi', 'Antipasti', 'Pizze', 'Mare', 'Fritti'] #['P', 'C', 'B']
-        
+
+        self.importPrinterFormat()
         self.impostazioniGet()
         self.importaDati()
 
@@ -36,6 +47,7 @@ class SalesManager:
         self.setupPlot()
         self.setupOrdini()
         self.setupImpoUI()
+        self.setupPrinterEditor()
         self.setupPanelOpt()
         self.setupHelp()
         self.setupMenu()
@@ -121,11 +133,14 @@ class SalesManager:
         self.menubar.add_command(label="ORDINI", command = lambda: self.show_frame('order'))#hideshoworder(True))
         self.menubar.add_command(label="TOOLS", command = lambda: self.show_frame('panelopt'))  #hideshowpanelopt(True))
         self.menubar.add_command(label="PRODS&PRICES", command = lambda: self.show_frame('impo')) #hideshowimpo(True))
+        self.menubar.add_command(label="PRINTER_EDITOR", command = lambda: self.show_frame('printer'))
         self.menubar.add_command(label="HELP", command = lambda: self.show_frame('help'))#hideshowhelp(True))
 
     def show_frame(self, fr_name):
-        frames =      [self.cassa_frame, self.order_frame, self.impo_frame, self.help_frame, self.plot_frame, self.opt_frame]
-        fr_names = np.array(['cassa',         'order',          'impo',         'help',           'plot',     'panelopt'])
+        frames =      [self.cassa_frame, self.order_frame, self.impo_frame, 
+                       self.help_frame, self.plot_frame, self.opt_frame, self.printer_editor]
+        fr_names = np.array(['cassa',  'order', 'impo',  
+                             'help',  'plot', 'panelopt', 'printer'])
         id = np.where(fr_names == fr_name)[0] #np.where restituisce l'array degli indici dove è vero, perciò va selezionato [0]
         for i in range(len(frames)):
             if (i != id):
@@ -623,86 +638,15 @@ class SalesManager:
         self.NOME.insert(0, new_id)
 
 
-    def stampa_fattura(self):
-        import win32print
-        import win32ui
-        import win32con
-        from PIL import Image, ImageWin
-
-        Qvet, Svet, Pvet, sconto, sconto0, discount_c, prezzoBase, prezzoFattura = self.calcola_fattura()
-        clientID = self.NOME.get()
-        note = self.NOTE.get("1.0","end").replace("\n", "")
-        
-        printer_name = "paninoteca"   #to print with the thermal printer
-        # printer_name = "Microsoft Print to PDF"    #to create a pdf file
-
-        try:
-            # Controllo se la stampante esiste
-            printers = [p[2] for p in win32print.EnumPrinters(win32print.PRINTER_ENUM_LOCAL)]
-            if printer_name not in printers:
-                raise RuntimeError(f"Stampante '{printer_name}' non trovata")
-
-            dc = win32ui.CreateDC()
-            dc.CreatePrinterDC(printer_name)
-            dc.StartDoc("Scontrino Moderno")
-            dc.StartPage()
-
-            y = 50  # coordinata verticale iniziale
-
-            # === INTESTAZIONE ===
-            font_title = win32ui.CreateFont({"name": "Arial", "height": 50, "weight": 700})
-            dc.SelectObject(font_title)
-            dc.TextOut(0, y, "🍔 PANINOTECA REPAX 🍔")
-            y += 50
 
 
-            # linea decorativa
-            font_line = win32ui.CreateFont({"name": "Arial", "height": 25, "weight": 450})
-            dc.SelectObject(font_line)
-            dc.TextOut(70, y, "================================")
-            y += 50
 
 
-            # === DETTAGLI CLIENTE E PRODOTTI ===
-            font_body = win32ui.CreateFont({"name": "Arial", "height": 25, "weight": 450})
-            dc.SelectObject(font_body)
 
-            dc.TextOut(50, y, f"Cliente: {clientID}")
-            y += 35
-            dc.TextOut(50, y, "Prodotti:")
-            y += 30
 
-            for i, qty in enumerate(Qvet):
-                if qty > 0:
-                    prodotto = self.impo.iloc[i]['prodotto']
-                    prezzo = self.impo.iloc[i]['prezzo']*qty
-                    riga = f"• {prodotto:<20} x{int(qty):<2} EUR {prezzo:>5.2f}"
-                    dc.TextOut(70, y, riga)
-                    y += 30
 
-            # linea separatrice prima del totale
-            dc.TextOut(50, y, "---------------------------------------------")
-            y += 30
 
-            # === TOTALE ===
-            font_total = win32ui.CreateFont({"name": "Arial", "height": 25, "weight": 450})
-            dc.SelectObject(font_total)
-            dc.TextOut(50, y, f"Totale: EUR {prezzoFattura:.2f}")
-            y += 50
 
-            # === NOTE ===
-            font_note = win32ui.CreateFont({"name": "Arial", "height": 25, "weight": 450})
-            dc.SelectObject(font_note)
-            if note.strip():
-                dc.TextOut(50, y, f"Note: {note}")
-                y += 30
-
-            # === FINE DOCUMENTO ===
-            dc.EndPage()
-            dc.EndDoc()
-
-        except Exception as e:
-            print(f"Stampante non disponibile o errore di stampa: {e}")
 
 
 
@@ -838,7 +782,6 @@ class SalesManager:
         df.to_csv(self.path_impo, sep=';', index=False, decimal=',')
         self.impo = df
         self.fill_cassa()
-        #self.hideshowcassa(False)
         self.backupDati()
         self.creaDati()
 
@@ -959,74 +902,6 @@ class SalesManager:
         manuale.insert(tk.END, testo)
         manuale.pack(side=tk.LEFT, padx=10, pady=10, expand=True, fill=tk.BOTH)
 
-    # def hideshowcassa(self, cassaOn):
-    #     if (cassaOn):
-    #         self.hideshowplot(False)
-    #         self.hideshoworder(False)
-    #         self.hideshowimpo(False)
-    #         self.hideshowhelp(False)
-    #         self.hideshowpanelopt(False)
-    #         self.cassa_frame.pack(expand=True, pady=20)
-    #     else:
-    #         self.cassa_frame.pack_forget()
-
-    # def hideshowplot(self, plotOn):
-    #     if (plotOn):
-    #         self.hideshowcassa(False)
-    #         self.hideshoworder(False)
-    #         self.hideshowimpo(False)
-    #         self.hideshowhelp(False)
-    #         self.hideshowpanelopt(False)
-    #         self.plot_frame.pack(expand=True, pady=5, padx=5, fill=tk.BOTH)
-    #     else:
-    #         self.plot_frame.pack_forget()
-
-    # def hideshoworder(self, orderOn):
-    #     if (orderOn):
-    #         self.hideshowcassa(False)
-    #         self.hideshowplot(False)
-    #         self.hideshowimpo(False)
-    #         self.hideshowhelp(False)
-    #         self.hideshowpanelopt(False)
-    #         self.order_frame.pack(expand=True, pady=5, padx=5, fill=tk.BOTH)
-    #         self.fill_scrollbar()
-    #     else: 
-    #         self.order_frame.pack_forget()
-
-    # def hideshowimpo(self, impoOn):
-    #     if (impoOn):
-    #         self.hideshowcassa(False)
-    #         self.hideshowplot(False)
-    #         self.hideshoworder(False)
-    #         self.hideshowpanelopt(False)
-    #         self.hideshowhelp(False)
-    #         self.impo_frame.pack(expand=True, pady=5, padx=5) 
-    #     else:
-    #         self.impo_frame.pack_forget()
-
-    # def hideshowpanelopt(self, poOn):
-    #     if (poOn):
-    #         self.hideshowcassa(False)
-    #         self.hideshowplot(False)
-    #         self.hideshoworder(False)
-    #         self.hideshowhelp(False)
-    #         self.hideshowimpo(False)
-    #         self.opt_frame.pack(expand=True, pady=5, padx=5) 
-    #     else:
-    #         self.opt_frame.pack_forget()            
-
-    # def hideshowhelp(self, helpOn):
-    #     if (helpOn):
-    #         self.hideshowcassa(False)
-    #         self.hideshowplot(False)
-    #         self.hideshoworder(False)
-    #         self.hideshowimpo(False)
-    #         self.hideshowpanelopt(False)
-    #         self.help_frame.pack(expand=True, pady=5, padx=5) 
-    #     else:
-    #         self.help_frame.pack_forget()        
-
-
 
 
 ############################################################################################################ REPORT-PLOT
@@ -1050,7 +925,6 @@ class SalesManager:
         # self.canvas = FigureCanvasTkAgg(self.fig, master=self.plot_frame)
         # self.canvas.draw()
         # self.canvas.get_tk_widget().pack(pady=10, padx=10, fill=tk.BOTH)
-
         
         # fig1 , axs1 = plt.subplots(2, 2, figsize=(15, 12))
         # fig1.subplots_adjust(wspace=0.3, hspace=0.3)
@@ -1074,7 +948,6 @@ class SalesManager:
 
         # self.axs_list = axs1, axs2, axs3, axs4
         # self.canv_list = canv1, canv2, canv3, canv4
-        ["prod_sales", "day_revenue", "prod_table", 'prod_totals']
 
         dizio = {
             'prod_totals' : {'subplots': (1,2) , 'space':(1, 1), 'size': (15,8), 'axs':None, 'canvas':None , 'fun': self.prod_charts},
@@ -1137,57 +1010,15 @@ class SalesManager:
 
 
     def plotta(self):
-        #self.hideshowplot(True)
         self.show_frame('plot')
         self.build_report()
         self.call_plot(self.plot_id.get())
 
 
 
-        #old good work
-        # self.build_report()
-        # self.info_chart2()
-        # self.pie_chart()
-        # self.table_chart()
-        # self.barplot_chart()
-        
-        # self.axs[0][1].axis('off')
-        # self.axs[1][1].axis('off')
-        # self.axs[2][1].axis('off')
-
-
-        #new work
-        #self.build_report()
-        #self.prod_charts()
-        #self.day_charts()
-
-        
-        #self.canvas.draw()
-
-
-
-    # def call_plot(self, plot_id):
-
-    #     if plot_id == 'prod_sales':
-    #         self.prod_table_charts()
-
-    #     if plot_id == 'prod_totals':
-    #         self.prod_charts()
-
-    #     if plot_id == 'prod_table':
-    #         self.prod_table()
-
-    #     if plot_id == 'day_revenue':
-    #         self.day_charts()
-
-
-
-        #ctk.CTkButton(master = self.plot_frame, text="Refresh Plot", command=self.plotta).pack(side=tk.TOP)
-        #self.hideshowplot(False)
-
     def build_report(self):
-        tot_price = self.dataset['prezzo'].astype(float).sum()
-        tot_dis = self.dataset['sconto'].astype(float).sum()
+        tot_price = np.round(self.dataset['prezzo'].astype(float).sum(), 2)
+        tot_dis = np.round(self.dataset['sconto'].astype(float).sum(), 2)
         tot_quantity = self.dataset[self.impo['prodotto']].astype(int).sum(axis=1).sum()
         tot_orders = np.array(self.dataset['prezzo'].astype(float) > 0).astype(int).sum()
 
@@ -1198,14 +1029,6 @@ class SalesManager:
                          + '#VENDUTO: ' + str(tot_quantity)  )
 
     def prod_table_charts(self, axs1):
-
-        # axs1 , axs2, axs3, axs4 = self.axs_list       # = self.axs_list#, axs2, axs3 = self.axs_list
-        # canv1, canv2, canv3, canv4 = self.canv_list   # = self.canv_list#, canv2, canv3 = self.canv_list
-
-        # canv2.get_tk_widget().pack_forget()
-        # canv3.get_tk_widget().pack_forget()
-        # canv4.get_tk_widget().pack_forget()
-        # canv1.get_tk_widget().pack(pady=10, padx=10, fill=tk.BOTH)
 
         if (len(self.dataset) > 2):
 
@@ -1297,33 +1120,17 @@ class SalesManager:
             axs1[1][0].set_ylabel('prod quantity')
 
 
-
-
-
-            # barplot 
-            # prod_names = self.impo['prodotto'] 
-            # prod_q = []
-            # for p in prod_names:
-            #     prod_q.append(self.dataset[p].astype(int).sum())
-
-            #df_barplot = pd.DataFrame({'product':prod_names, 'quantity': totali})
-
             y_pos = np.arange(len(prod_names))
 
             #axs1[1][0].axis('off')
 
 
-
-
             axs1[1][1].clear()
-            #axs1[1][1] = sns.barplot(df_barplot, y='product', x='quantity', hue='product', orient='h')
             axs1[1][1].barh(y_pos, totali, tick_label=prod_names, color = colors)
             axs1[1][1].set_yticks(y_pos, labels=prod_names)
             axs1[1][1].set_xlabel('quantity')
             axs1[1][1].set_ylabel('product')
  
-            #canv1.draw()
-
 
     def prod_tseries(self, axs):
         if (len(self.dataset) > 2):
@@ -1354,7 +1161,6 @@ class SalesManager:
 
 
             #line plot
-            import matplotlib.dates as mdates
             #axs1[1][0].axis('off')
             # First, transpose the dataframe so dates become rows and labels become columns
             df = pivoTab
@@ -1393,16 +1199,6 @@ class SalesManager:
 
     def prod_charts(self, axs4):
 
-        # axs1 , axs2, axs3, axs4 = self.axs_list       # = self.axs_list#, axs2, axs3 = self.axs_list
-        # canv1, canv2, canv3, canv4 = self.canv_list   # = self.canv_list#, canv2, canv3 = self.canv_list
-
-        # canv2.get_tk_widget().pack_forget()
-        # canv3.get_tk_widget().pack_forget()
-        # canv1.get_tk_widget().pack_forget()
-        # canv4.get_tk_widget().pack(pady=10, padx=10, fill=tk.BOTH)
-
-
-
         if (len(self.dataset) > 2):
 
             prod_names = self.impo['prodotto']
@@ -1422,15 +1218,6 @@ class SalesManager:
 
             y_pos = np.arange(len(prod_names))
 
-            # axs4[1][0].axis('off')
-            # axs4[0][1].axis('off')
-
-            # axs4[1][1].clear()
-            # #axs1[1][1] = sns.barplot(df_barplot, y='product', x='quantity', hue='product', orient='h')
-            # axs4[1][1].barh(y_pos, totali, tick_label=prod_names, color = colors)
-            # axs4[1][1].set_yticks(y_pos, labels=prod_names)
-            # axs4[1][1].set_xlabel('quantity')
-            # axs4[1][1].set_ylabel('product')
  
             axs4[1].clear()
             axs4[1].barh(y_pos, totali, tick_label=prod_names, color = colors)
@@ -1438,18 +1225,8 @@ class SalesManager:
             axs4[1].set_xlabel('quantity')
             axs4[1].set_ylabel('product')
 
-            #canv4.draw()
-
-
 
     def prod_table(self, axs3):
-        # axs1 , axs2, axs3, axs4 = self.axs_list# = self.axs_list#, axs2, axs3 = self.axs_list
-        # canv1, canv2, canv3, canv4 = self.canv_list# = self.canv_list#, canv2, canv3 = self.canv_list
-
-        # canv2.get_tk_widget().pack_forget()
-        # canv1.get_tk_widget().pack_forget()
-        # canv4.get_tk_widget().pack_forget()
-        # canv3.get_tk_widget().pack(pady=10, padx=10, fill=tk.BOTH)
 
         if (len(self.dataset) > 0):
 
@@ -1497,14 +1274,6 @@ class SalesManager:
 
 
     def category_charts(self, axs1):
-
-        # axs1 , axs2, axs3, axs4 = self.axs_list       # = self.axs_list#, axs2, axs3 = self.axs_list
-        # canv1, canv2, canv3, canv4 = self.canv_list   # = self.canv_list#, canv2, canv3 = self.canv_list
-
-        # canv2.get_tk_widget().pack_forget()
-        # canv3.get_tk_widget().pack_forget()
-        # canv4.get_tk_widget().pack_forget()
-        # canv1.get_tk_widget().pack(pady=10, padx=10, fill=tk.BOTH)
 
         if (len(self.dataset) > 2):
 
@@ -1573,7 +1342,6 @@ class SalesManager:
 
 
             #line plot
-            import matplotlib.dates as mdates
             #axs1[1][0].axis('off')
             # First, transpose the dataframe so dates become rows and labels become columns
             df = pivoTab.copy()
@@ -1597,48 +1365,22 @@ class SalesManager:
             axs1[1][0].set_xlabel('date')
             axs1[1][0].set_ylabel('prod quantity')
 
-
-
-
-
-            # barplot 
-            # prod_names = self.impo['prodotto'] 
-            # prod_q = []
-            # for p in prod_names:
-            #     prod_q.append(self.dataset[p].astype(int).sum())
-
-            #df_barplot = pd.DataFrame({'product':prod_names, 'quantity': totali})
-
             y_pos = np.arange(len(self.used_cats))
 
             #axs1[1][0].axis('off')
 
 
-
-
             axs1[1][1].clear()
-            #axs1[1][1] = sns.barplot(df_barplot, y='product', x='quantity', hue='product', orient='h')
             axs1[1][1].barh(y_pos, totali, tick_label=self.used_cats, color = colors)
             axs1[1][1].set_yticks(y_pos, labels=self.used_cats)
             axs1[1][1].set_xlabel('quantity')
             axs1[1][1].set_ylabel('product')
  
-            #canv1.draw()
-
 
 
     def day_charts(self, axs2):
+
         if (len(self.dataset) > 0):
-
-            # axs1 , axs2, axs3, axs4 = self.axs_list# = self.axs_list#, axs2, axs3 = self.axs_list
-            # canv1, canv2, canv3, canv4 = self.canv_list# = self.canv_list#, canv2, canv3 = self.canv_list
-
-            # canv1.get_tk_widget().pack_forget()
-            # canv3.get_tk_widget().pack_forget()
-            # canv4.get_tk_widget().pack_forget()
-            # canv2.get_tk_widget().pack(pady=10, padx=10, fill=tk.BOTH)
-
-
             #get data
             df = self.dataset.copy()
             if (df['ts'][0] == '0') or (df['ts'][0] == 0):
@@ -1716,209 +1458,6 @@ class SalesManager:
 
 
             #canv2.draw()
-
-
-    def pie_chart(self):
-
-
-        # Pie
-
-        # self.fig, self.axs = plt.subplots(2, 2, figsize=(13, 9))
-        # self.canvas = FigureCanvasTkAgg(self.fig, master=self.plot_frame)
-        # self.canvas.draw()
-        # self.canvas.get_tk_widget().pack(pady=10, padx=10, fill=tk.BOTH)
-        
-
-        #self.axs[0][0].clear()
-        if (len(self.dataset) > 2):
-
-            df1 = self.dataset[self.impo['prodotto']]
-            totali = [df1[prod].astype(int).sum() for prod in self.impo['prodotto']]
-
-            self.axs[0][0].clear()
-            self.axs[0][0].pie(totali, labels = self.impo['prodotto'], startangle=45, autopct='%1.1f%%')#,pctdistance=1.25, labeldistance=.6) #autopct=absolute_value)
-            self.axs[0][0].set_title('ventite totali')
-
-            # self.axs[0].clear()
-            # self.axs[0].pie(totali, labels = self.impo['prodotto'], startangle=45, autopct='%1.1f%%')#,pctdistance=1.25, labeldistance=.6) #autopct=absolute_value)
-            # self.axs[0].set_title('ventite totali')
-
-
-    def table_chart(self):
-        
-        # data for plotting
-        colonne = list(self.impo['prodotto']) #+ ['sconto', 'prezzo']
-        for c in colonne:
-            self.dataset[c] = pd.to_numeric(self.dataset[c])
-
-        # Pivot
-        #self.axs[0][1].clear()
-        if (len(self.dataset) > 0):
-            
-            df = self.dataset.copy()
-            if (df['ts'][0] == '0') or (df['ts'][0] == 0):
-               df = df.drop([0])
-
-            #filter data by today 
-            tformat = "%Y-%m-%d %H:%M:%S.%f"   #2025-09-17 14:39:40.405671
-            ts = [datetime.strptime(s, tformat).date() for s in  df['ts']]
-            df['date'] = ts
-
-            # df['date'] = self.dataset['ts']
-
-            pivoTab = df.pivot_table(index = 'date', 
-                                            values = colonne,
-                                            aggfunc='sum',
-                                            sort=False).T
-
-            for c in self.used_cats:
-                nomi = np.array(self.impo['prodotto'])[self.impo['categoria']==c].tolist()
-                pivoTab_p = df.pivot_table(index = 'date', 
-                                                values = nomi,
-                                                aggfunc='sum',
-                                                sort=False).T
-                newrow = pivoTab_p.sum(axis=0)
-                newrow.name = 'tot' + c
-                pivoTab = pd.concat([pivoTab, newrow.to_frame().T])
-
-            ####totale di ogni voce
-            pivoTab = pivoTab.assign(TOT = pivoTab.sum(axis=1))
-            
-            #####creazione tabella
-            for c in pivoTab.columns:
-                    pivoTab[c] = pivoTab[c].astype(int)
-
-            self.axs[1][0].clear()
-            self.axs[1][0].axis('off')
-            self.axs[1][0].table(cellText = pivoTab.values, rowLabels = pivoTab.index, colLabels=pivoTab.columns, loc ='center')
-            #self.axs[1][0].set_title('totali per giorno')  #questo titolo si sovrappone alla tabella
-
-            # self.axs[1].clear()
-            # self.axs[1].axis('off')
-            # self.axs[1].table(cellText = pivoTab.values, rowLabels = pivoTab.index, colLabels=pivoTab.columns, loc ='center')
-            # self.axs[1].set_title('totali per giorno')  #questo titolo si sovrappone alla tabella
-
-
-    def barplot_chart(self):
-        # barplot
-        
-        if (len(self.dataset) > 0):
-            prod_names = self.impo['prodotto'] 
-            prod_q = []
-            for p in prod_names:
-                prod_q.append(self.dataset[p].astype(int).sum())
-
-            df_barplot = pd.DataFrame({'product':prod_names, 'quantity': prod_q})
-
-            y_pos = np.arange(len(prod_names))
-
-            # self.axs[2][2].clear()
-            # self.axs[2][2] = sns.barplot(df_barplot, y='product', x='quantity', hue='product', orient='h')
-
-            # self.axs[2].clear()
-            # self.axs[2] = sns.barplot(df_barplot, y='product', x='quantity', hue='product', orient='h')
-
-
-            # self.axs[0][2].barh(y_pos, prod_q, tick_label=prod_names)
-            # self.axs[0][2].set_yticks(y_pos, labels=prod_names)
-            # self.axs[0][2].set_xlabel('quantity')
-            # self.axs[0][2].set_ylabel('product')
-
-
-    def info_chart2(self):
-        # barplot
-        
-        if (len(self.dataset) > 0):
-
-            #get data
-            df = self.dataset.copy()
-            if (df['ts'][0] == '0') or (df['ts'][0] == 0):
-                df = df.drop([0])
-
-            #get dates
-            tformat = "%Y-%m-%d %H:%M:%S.%f"
-            tformat2 = "%d/%m/%y"
-            date = [datetime.strptime(t, tformat).strftime(tformat2)  for t in df['ts']]
-            df['date'] = date
-
-            #get totals
-            prod_names = self.impo['prodotto']
-            prod_totals = np.array(df[prod_names].sum(axis=1))
-            
-
-
-            date_u = np.unique(date)
-            ricavi = []
-            sconti = []
-            n_ordini = []
-            n_vendite = []
-
-            
-            for d in date_u:
-                ricavi.append(df['prezzo'][df['date']==d].astype(float).sum())
-                sconti.append(df['sconto'][df['date']==d].astype(float).sum())
-                n_ordini.append(np.array(df['date']==d).astype(int).sum())
-                n_vendite.append(np.array(prod_totals[df['date']==d]).astype(int).sum())
-
-            #df_barplot = pd.DataFrame({'date': unici, 'revenue': ricavi})
-
-            self.axs[2][0].clear()
-            self.axs[2][0].bar(date_u, ricavi) #= sns.barplot(df_barplot, y='date', x='revenue', orient='v')
-            self.axs[2][0].set_title('ricavi per giorni')
-            self.axs[2][0].set_xlabel('date')
-            self.axs[2][0].set_ylabel('revenue')
-
-            # self.axs[0].clear()
-            # self.axs[0].bar(unici, ricavi) #= sns.barplot(df_barplot, y='date', x='revenue', orient='v')
-            # self.axs[0].set_title('ricavi per giorni')
-            # self.axs[0].set_xlabel('date')
-            # self.axs[0].set_ylabel('revenue')
-
-
-            self.axs[0][2].clear()
-            self.axs[0][2].axis('off')
-            self.axs[0][2].pie(ricavi, labels = date_u, startangle=45, autopct='%1.1f%%')
-            self.axs[0][2].set_title('% ricavi per giorni')
-
-            # self.axs[2].clear()
-            # self.axs[2].axis('off')
-            # self.axs[2].pie(ricavi, labels = unici, startangle=45, autopct='%1.1f%%')
-            # self.axs[2].set_title('% ricavi per giorni')
-
-
-
-            date_u = date_u.tolist()
-            s_ricavi = np.array(ricavi).sum()
-            m_ricavi = np.round(np.array(ricavi).mean(), 2)
-            ricavi.append(s_ricavi)
-            ricavi.append(m_ricavi)
-            s_sconti = np.array(sconti).sum()
-            m_sconti = np.round(np.array(sconti).mean(), 2)
-            sconti.append(s_sconti)
-            sconti.append(m_sconti)       
-            s_n_vendite = np.array(n_vendite).astype(int).sum()
-            m_n_vendite = np.round(np.array(n_vendite).astype(int).mean(), 2)
-            n_vendite.append(s_n_vendite)
-            n_vendite.append(m_n_vendite)                      
-            s_n_ordini = np.array(n_ordini).sum()
-            m_n_ordini = np.round(np.array(n_ordini).mean(), 2)
-            n_ordini.append(s_n_ordini)
-            n_ordini.append(m_n_ordini)         
-
-
-            date_u.append('TOT')
-            date_u.append('MEAN')
-
-            tab = pd.DataFrame({'ricavi': ricavi, 'sconti': sconti, 'n_ordini': n_ordini, 'n_vendite': n_vendite})
-            tab.index = date_u
-
-            self.axs[1][2].clear()
-            self.axs[1][2].axis('off')
-            self.axs[1][2].table(cellText = tab.values, rowLabels = tab.index, colLabels=tab.columns, loc ='center')
-
-            # self.axs[1].clear()
-            # self.axs[1].axis('off')
-            # self.axs[1].table(cellText = tab.values, rowLabels = tab.index, colLabels=tab.columns, loc ='center')
 
 
 
@@ -2088,3 +1627,709 @@ class SalesManager:
         
 
 
+######################################################################################### RECEIPT EDITOR / THERMAL PRINTER
+
+
+
+    def setupPrinterEditor(self):
+
+        self.fonts = list(font.families())
+
+        self.printer_editor = tk.Frame(self.root)
+        self.printer_editor.pack(expand=True, pady=5, padx=5)  
+
+        header = tk.Frame(self.printer_editor)
+        header.pack(side=tk.TOP, pady=5)
+
+        self.printerListForm = tk.Frame(self.printer_editor)
+        self.printerListForm.pack(side=tk.TOP)
+
+        #self.rowListPrint = []
+        #self.boxListPrint = []
+
+        self.printWBoxDict = {}
+        self.printEditorId = 0
+
+        printers = [p[2] for p in win32print.EnumPrinters(win32print.PRINTER_ENUM_LOCAL)]
+        printers = ['No Printer'] + printers
+
+        tk.Label(header, text='Select printer:', font=("Arial", 12)).pack(side=tk.LEFT)
+        self.printer_name = tk.StringVar()
+        self.printer_name.set(printers[0])
+        drop = ctk.CTkComboBox(header , variable = self.printer_name , values = printers)
+        drop.pack(side=tk.LEFT)
+
+        ctk.CTkButton(header, text='Add Text Box', command = self.aggiungiPrinterBox).pack(side=tk.LEFT, padx=10)
+        ctk.CTkButton(header, text='Save Printer Format', command = self.salvaPrinterFormat).pack(side=tk.LEFT, padx=10)
+
+
+
+    def destroyPrintBox(self, id):
+        self.printWBoxDict[id]['row'].destroy()
+        del self.printWBoxDict[id]
+
+
+    def aggiungiPrinterBox(self, text=None):
+
+        tipi = ['textBox', 'prodBox', 'total price', 
+                'total discount', 'timestamp', 'order id', 'noteBox', 'draw_with_text_ASCII']
+
+        id = 'text' + str(self.printEditorId)
+        self.printEditorId += 1
+        self.printWBoxDict[id] = {}
+
+
+        row = tk.Frame(self.printerListForm)
+        row.pack(side = tk.TOP)
+
+        self.printWBoxDict[id]['row'] = row
+
+
+        tk.Label(row, text=id, font=("Arial", 5)).pack(side=tk.LEFT)
+        tk.Button(row, text='REMOVE', font=("Arial", 8),
+             command = lambda id=id: self.destroyPrintBox(id)).pack(side=tk.LEFT, padx=0)
+
+        tk.Label(row, text='text type:', font=("Arial", 10)).pack(side=tk.LEFT)
+        boxtype = tk.StringVar()
+        boxtype.set(tipi[0])
+        drop = ctk.CTkComboBox(row , variable = boxtype , values = tipi, width = 80,
+        command = lambda v = self, r=row , b = boxtype, i = id : self.printerBoxContent(r, b, i))
+        drop.pack(side=tk.LEFT)
+
+        subframe = tk.Frame(row)
+        subframe.pack(side=tk.LEFT)
+        self.printWBoxDict[id]['box'] = subframe
+
+
+
+        self.printerBoxContent(row, boxtype, id)
+        
+
+
+    def printerBoxContent(self, rowFrame, boxtype, id):
+
+        t = boxtype.get()
+
+        self.printWBoxDict[id]['box'].destroy()
+
+        subframe = tk.Frame(rowFrame)
+        subframe.pack(side=tk.LEFT)
+
+        self.printWBoxDict[id]['box'] = subframe
+        self.printWBoxDict[id]['boxType'] = t
+
+
+
+        if t != 'draw_with_text_ASCII':
+
+            tk.Label(subframe, text='font family: ').pack(side=tk.LEFT)
+            fontype = tk.StringVar()
+            fontype.set('Arial')
+            drop = ctk.CTkComboBox(subframe , variable = fontype , values = self.fonts, width = 70)
+            drop.pack(side=tk.LEFT)
+
+            tk.Label(subframe, text='font size:').pack(side=tk.LEFT)
+            spinFont = tk.Spinbox(subframe, increment=1, from_=0, to=9000, width=4, font = ('Arial', 10))
+            spinFont.delete(0,"end")
+            spinFont.insert(0, 20)
+            spinFont.pack(side=tk.LEFT)
+            tk.Label(subframe, text='font weight:').pack(side=tk.LEFT)
+            spinFont0 = tk.Spinbox(subframe, increment=1, from_=0, to=9000, width=4, font = ('Arial', 10))
+            spinFont0.delete(0,"end")
+            spinFont0.insert(0, 400)
+            spinFont0.pack(side=tk.LEFT)
+            tk.Label(subframe, text= 'left_space:').pack(side=tk.LEFT)
+            spinLeft = tk.Spinbox(subframe, increment=1, from_=0, to=9000, width=4, font = ('Arial', 10))
+            spinLeft.delete(0,"end")
+            spinLeft.insert(0, 50)
+            spinLeft.pack(side=tk.LEFT)
+            tk.Label(subframe, text= 'up_gap:').pack(side=tk.LEFT)
+            spinGap = tk.Spinbox(subframe, increment=1, from_=0, to=9000, width=4, font = ('Arial', 10))
+            spinGap.delete(0,"end")
+            spinGap.insert(0, 30)
+            spinGap.pack(side=tk.LEFT)
+
+            self.printWBoxDict[id]['fontfamily'] = fontype
+            self.printWBoxDict[id]['fontsize'] = spinFont
+            self.printWBoxDict[id]['fontweight'] = spinFont0
+            self.printWBoxDict[id]['leftspace'] = spinLeft
+            self.printWBoxDict[id]['topspace'] = spinGap
+
+        else:
+
+            tk.Label(subframe, text='font family: ').pack(side=tk.LEFT)
+            fontype = tk.StringVar()
+            fontype.set('Courier New')
+            drop = ctk.CTkComboBox(subframe , variable = fontype , values = ['Courier New', 'Lucida Console', 'Consolas'], width = 70)
+            drop.pack(side=tk.LEFT)
+
+            tk.Label(subframe, text='font size:').pack(side=tk.LEFT)
+            spinFont = tk.Spinbox(subframe, increment=1, from_=0, to=9000, width=4, font = ('Arial', 10))
+            spinFont.delete(0,"end")
+            spinFont.insert(0, 20)
+            spinFont.pack(side=tk.LEFT)
+            tk.Label(subframe, text= 'left_space:').pack(side=tk.LEFT)
+            spinLeft = tk.Spinbox(subframe, increment=1, from_=0, to=9000, width=4, font = ('Arial', 10))
+            spinLeft.delete(0,"end")
+            spinLeft.insert(0, 50)
+            spinLeft.pack(side=tk.LEFT)
+            tk.Label(subframe, text= 'up_gap:').pack(side=tk.LEFT)
+            spinGap = tk.Spinbox(subframe, increment=1, from_=0, to=9000, width=4, font = ('Arial', 10))
+            spinGap.delete(0,"end")
+            spinGap.insert(0, 30)
+            spinGap.pack(side=tk.LEFT)
+
+            self.printWBoxDict[id]['fontfamily'] = fontype
+            self.printWBoxDict[id]['fontsize'] = spinFont
+            self.printWBoxDict[id]['leftspace'] = spinLeft
+            self.printWBoxDict[id]['topspace'] = spinGap
+            tk.Label(subframe, text='paste here your text/ASCII art (if big it will be pasted anyway): ').pack(side=tk.LEFT)
+            tb = tk.Text(subframe, width = 60, height=5)
+            tb.pack(side=tk.LEFT)
+            self.printWBoxDict[id]['text'] = tb
+
+
+
+        if t == 'textBox':
+
+            tk.Label(subframe, text= 'in_gap:').pack(side=tk.LEFT)
+            spinGap0 = tk.Spinbox(subframe, increment=1, from_=0, to=9000, width=4, font = ('Arial', 10))
+            spinGap0.delete(0,"end")
+            spinGap0.insert(0, 30)
+            spinGap0.pack(side=tk.LEFT)
+
+            tk.Label(subframe, text='text: ').pack(side=tk.LEFT)
+            tb = tk.Text(subframe, width = 60, height=5)
+            tb.pack(side=tk.LEFT)
+
+            self.printWBoxDict[id]['linespace'] = spinGap0
+            self.printWBoxDict[id]['text'] = tb
+
+
+
+        if t == 'prodBox':
+            
+            tk.Label(subframe, text= 'in_gap:').pack(side=tk.LEFT)
+            spinGap0 = tk.Spinbox(subframe, increment=1, from_=0, to=9000, width=4, font = ('Arial', 10))
+            spinGap0.delete(0,"end")
+            spinGap0.insert(0, 30)
+            spinGap0.pack(side=tk.LEFT)
+            self.printWBoxDict[id]['linespace'] = spinGap0
+
+            tk.Label(subframe, text='quantity:').pack(side=tk.LEFT)
+            checkQ = tk.IntVar()
+            checkQ.set(1)
+            checkinputQ = ctk.CTkCheckBox(subframe,  text='', variable=checkQ, 
+                                          onvalue=1, offvalue=0, width = 1)
+            checkinputQ.pack(side=tk.LEFT, padx=0) 
+
+
+            tk.Label(subframe, text='price:').pack(side=tk.LEFT)
+            checkP = tk.IntVar()
+            checkP.set(0)
+            checkinputP = ctk.CTkCheckBox(subframe,  text='',  variable=checkP, 
+                                          onvalue=1, offvalue=0, width = 1)
+            checkinputP.pack(side=tk.LEFT, padx=0) 
+
+            tk.Label(subframe, text='unpurchased:').pack(side=tk.LEFT)
+            checkU = tk.IntVar()
+            checkU.set(0)
+            checkinputU = ctk.CTkCheckBox(subframe,  text='',  variable=checkU, 
+                                          onvalue=1, offvalue=0, width = 1)
+            checkinputU.pack(side=tk.LEFT, padx=0) 
+
+            tk.Label(subframe, text='text: ').pack(side=tk.LEFT)
+            prev = tk.Entry(subframe, text='', font=("Arial", 10))
+            prev.pack(side=tk.LEFT)
+            tk.Label(subframe, text='_prod_').pack(side=tk.LEFT)
+            inside0 = tk.Entry(subframe, text='  ', font=("Arial", 10))
+            inside0.pack(side=tk.LEFT)
+            tk.Label(subframe, text='_quantity_').pack(side=tk.LEFT)
+            inside1 = tk.Entry(subframe, text='  €', font=("Arial", 10))
+            inside1.pack(side=tk.LEFT)
+            tk.Label(subframe, text='_price_').pack(side=tk.LEFT)
+            post = tk.Entry(subframe, text='', font=("Arial", 10))
+            post.pack(side=tk.LEFT)
+
+            self.printWBoxDict[id]['show_quantity'] = checkQ
+            self.printWBoxDict[id]['show_price'] = checkP
+            self.printWBoxDict[id]['show_unpurchased'] = checkU
+            self.printWBoxDict[id]['prev'] = prev
+            self.printWBoxDict[id]['in0'] = inside0
+            self.printWBoxDict[id]['in1'] = inside1
+            self.printWBoxDict[id]['post'] = post
+
+
+        if t == 'total price':
+
+            tk.Label(subframe, text='text: ').pack(side=tk.LEFT)
+            prev = tk.Entry(subframe, font=("Arial", 10))
+            prev.insert(0, 'tot price: €')
+            prev.pack(side=tk.LEFT)
+            tk.Label(subframe, text='_total_price_').pack(side=tk.LEFT)
+            post = tk.Entry(subframe, text='', font=("Arial", 10))
+            post.pack(side=tk.LEFT)
+    
+            self.printWBoxDict[id]['prev'] = prev
+            self.printWBoxDict[id]['post'] = post    
+
+        if t == 'total discount':
+
+            tk.Label(subframe, text='text: ').pack(side=tk.LEFT)
+            prev = tk.Entry(subframe,  font=("Arial", 10))
+            prev.insert(0, 'tot discount: €')
+            prev.pack(side=tk.LEFT)
+            tk.Label(subframe, text='_total_discount_').pack(side=tk.LEFT)
+            post = tk.Entry(subframe, text='', font=("Arial", 10))
+            post.pack(side=tk.LEFT)
+
+            self.printWBoxDict[id]['prev'] = prev
+            self.printWBoxDict[id]['post'] = post    
+
+        if t == 'timestamp':
+
+            tk.Label(subframe, text='text: ').pack(side=tk.LEFT)
+            prev = tk.Entry(subframe,  font=("Arial", 10))
+            prev.pack(side=tk.LEFT)
+            tk.Label(subframe, text='_datetime_').pack(side=tk.LEFT)
+            post = tk.Entry(subframe, text='', font=("Arial", 10))
+            post.pack(side=tk.LEFT)
+
+            self.printWBoxDict[id]['prev'] = prev
+            self.printWBoxDict[id]['post'] = post    
+
+        if t == 'order id':
+
+            tk.Label(subframe, text='text: ').pack(side=tk.LEFT)
+            prev = tk.Entry(subframe,  font=("Arial", 10))
+            prev.pack(side=tk.LEFT)
+            tk.Label(subframe, text='_order_id_').pack(side=tk.LEFT)
+            post = tk.Entry(subframe, text='', font=("Arial", 10))
+            post.pack(side=tk.LEFT)
+
+            self.printWBoxDict[id]['prev'] = prev
+            self.printWBoxDict[id]['post'] = post    
+
+        if t == 'noteBox':
+
+            tk.Label(subframe, text= 'in_gap:').pack(side=tk.LEFT)
+            spinGap0 = tk.Spinbox(subframe, increment=1, from_=0, to=9000, width=5, font = ('Arial', 10))
+            spinGap0.delete(0,"end")
+            spinGap0.insert(0, 30)
+            spinGap0.pack(side=tk.LEFT)
+            self.printWBoxDict[id]['linespace'] = spinGap0
+
+            tk.Label(subframe, text='text: ').pack(side=tk.LEFT)
+            prev = tk.Entry(subframe,  font=("Arial", 10))
+            prev.pack(side=tk.LEFT)
+            tk.Label(subframe, text='_order_notes_').pack(side=tk.LEFT)
+            post = tk.Entry(subframe, text='', font=("Arial", 10))
+            post.pack(side=tk.LEFT)
+
+            self.printWBoxDict[id]['prev'] = prev
+            self.printWBoxDict[id]['post'] = post   
+
+
+
+
+
+    def salvaPrinterFormat(self):
+
+        printerFormat = {}
+
+        ids = list(self.printWBoxDict.keys())
+
+        for id in ids:
+            printerFormat[id] = {}
+
+            t = self.printWBoxDict[id]['boxType']
+            printerFormat[id]['boxType'] = t
+
+            
+            if t != 'draw_with_text_ASCII':
+                printerFormat[id]['fontfamily'] = self.printWBoxDict[id]['fontfamily'].get()
+                printerFormat[id]['fontsize'] = int(self.printWBoxDict[id]['fontsize'].get())
+                printerFormat[id]['fontweight'] = int(self.printWBoxDict[id]['fontweight'].get())
+                printerFormat[id]['leftspace'] = int(self.printWBoxDict[id]['leftspace'].get())
+                printerFormat[id]['topspace'] = int(self.printWBoxDict[id]['topspace'].get())        
+            else:
+                printerFormat[id]['fontfamily'] = self.printWBoxDict[id]['fontfamily'].get()
+                printerFormat[id]['fontsize'] = int(self.printWBoxDict[id]['fontsize'].get())
+                printerFormat[id]['leftspace'] = int(self.printWBoxDict[id]['leftspace'].get())
+                printerFormat[id]['topspace'] = int(self.printWBoxDict[id]['topspace'].get())     
+                printerFormat[id]['text'] = self.printWBoxDict[id]['text'].get("1.0", "end-1c")
+
+            if t == 'textBox':
+                printerFormat[id]['text'] = self.printWBoxDict[id]['text'].get("1.0", "end-1c")
+                printerFormat[id]['linespace'] = int(self.printWBoxDict[id]['linespace'].get())
+
+
+
+            if t in  ('total discount', 'total price','order id','timestamp'):
+                printerFormat[id]['prev'] = self.printWBoxDict[id]['prev'].get()
+                printerFormat[id]['post'] = self.printWBoxDict[id]['post'].get()
+
+            if t == 'noteBox':
+                printerFormat[id]['prev'] = self.printWBoxDict[id]['prev'].get()
+                printerFormat[id]['post'] = self.printWBoxDict[id]['post'].get()                
+                printerFormat[id]['linespace'] = int(self.printWBoxDict[id]['linespace'].get())
+
+            if t == 'prodBox':
+                printerFormat[id]['show_quantity'] = bool(self.printWBoxDict[id]['show_quantity'].get())
+                printerFormat[id]['show_price'] = bool(self.printWBoxDict[id]['show_price'].get())
+                printerFormat[id]['show_unpurchased'] = bool(self.printWBoxDict[id]['show_unpurchased'].get())
+                printerFormat[id]['prev'] = self.printWBoxDict[id]['prev'].get()
+                printerFormat[id]['in0'] = self.printWBoxDict[id]['in0'].get()
+                printerFormat[id]['in1'] = self.printWBoxDict[id]['in1'].get()
+                printerFormat[id]['post'] = self.printWBoxDict[id]['post'].get()
+                printerFormat[id]['linespace'] = int(self.printWBoxDict[id]['linespace'].get())
+
+
+
+        self.printerFormat = printerFormat
+
+        with open(self.path_printer, "w") as f:
+            json.dump(printerFormat, f)
+
+
+
+    def importPrinterFormat(self):
+        if os.path.exists(self.path_printer):
+            # Read from file and parse JSON
+            with open(self.path_printer, "r") as f:
+                self.printerFormat = json.load(f)
+        # else: 
+        #     self.printerFormat = 
+
+
+
+
+    def stampa_fattura(self):
+
+
+        printer_name = self.printer_name.get()
+
+        if printer_name != 'No Printer':
+
+            Qvet, Svet, Pvet, sconto, sconto0, discount_c, prezzoBase, prezzoFattura = self.calcola_fattura()
+            clientID = self.NOME.get()
+            note = self.NOTE.get("1.0","end-1c")#.replace("\n", "")
+            
+            #printer_name = "paninoteca"   #to print with the thermal printer
+            #printer_name = "Microsoft Print to PDF"    #to create a pdf file
+
+
+            #try:
+                # Controllo se la stampante esiste
+            printers = [p[2] for p in win32print.EnumPrinters(win32print.PRINTER_ENUM_LOCAL)]
+            if printer_name not in printers:
+                messagebox.showerror(f"Stampante '{printer_name}' non trovata")
+                raise RuntimeError(f"Stampante '{printer_name}' non trovata")
+            else:
+                dc = win32ui.CreateDC()
+                dc.CreatePrinterDC(printer_name)
+
+                # === INIZIO DOCUMENTO
+                dc.StartDoc("Scontrino Moderno")
+                dc.StartPage()
+
+                y = 0
+                printerFormat = self.printerFormat
+
+                for id in list(printerFormat.keys()):
+
+                    t = printerFormat[id]['boxType']
+
+                    if t != 'draw_with_text_ASCII':
+                        row_font = win32ui.CreateFont({"name": printerFormat[id]['fontfamily'], 
+                                                    "height": printerFormat[id]['fontsize'], 
+                                                    "weight": printerFormat[id]['fontweight']})
+                        dc.SelectObject(row_font)
+                    else:
+                        row_font = win32ui.CreateFont({"name": printerFormat[id]['fontfamily'], 
+                                                    "height": printerFormat[id]['fontsize'], 
+                                                    "weight": 400})
+                        dc.SelectObject(row_font)
+
+
+
+                    if t == 'total discount':
+                        s = printerFormat[id]['prev'] + str(np.round(sconto, 2)) + printerFormat[id]['post']
+                        y += printerFormat[id]['topspace']
+                        dc.TextOut(printerFormat[id]['leftspace'] , y, s)
+
+
+                    if t == 'total price':
+                        s = printerFormat[id]['prev'] + str(np.round(prezzoFattura, 2)) + printerFormat[id]['post']
+                        y += printerFormat[id]['topspace']
+                        dc.TextOut(printerFormat[id]['leftspace'] , y, s)
+
+                    if t == 'order id':
+                        s = printerFormat[id]['prev'] + clientID + printerFormat[id]['post']
+                        y += printerFormat[id]['topspace']
+                        dc.TextOut(printerFormat[id]['leftspace'] , y, s)
+
+                    if t == 'timestamp':
+                        tformat = '%Y/%m/%d %H:%M:%S.'
+                        s = printerFormat[id]['prev'] + datetime.now().strftime(tformat) + printerFormat[id]['post']
+                        y += printerFormat[id]['topspace']
+                        dc.TextOut(printerFormat[id]['leftspace'] , y, s)
+
+                    if t == 'textBox':
+                        mystr = printerFormat[id]['text']
+                        str_list = mystr.split('\n')
+                        y += printerFormat[id]['topspace']
+
+                        for s in str_list:
+                            y += printerFormat[id]['linespace']
+                            dc.TextOut(printerFormat[id]['leftspace'] , y, s)
+
+
+                    if t == 'draw_with_text_ASCII':
+                        #the font has to be width-fixed, as Courier New, Consolas, Lucida Console
+
+                        mystr = printerFormat[id]['text']
+
+                        str_list = mystr.split('\n')
+                        y += printerFormat[id]['topspace']
+
+                        # Get text metrics to calculate proper line spacing
+                        text_metrics = dc.GetTextMetrics()
+                        font_height = text_metrics['tmHeight']      # Total height of font
+                        external_leading = text_metrics['tmExternalLeading']  # Recommended extra space
+
+                        # Calculate dynamic gap - font height plus some extra spacing
+                        gap = font_height + external_leading # + 2  # Add 2 pixels for extra spacing
+
+                        for s in str_list:
+                            y += gap
+                            dc.TextOut(printerFormat[id]['leftspace'] , y, s)
+
+
+
+                    if t == 'noteBox':
+                        mystr = printerFormat[id]['prev'] + note + printerFormat[id]['post']
+                        str_list = mystr.split('\n')
+                        y += printerFormat[id]['topspace']
+                        for s in str_list:
+                            y += printerFormat[id]['linespace']
+                            dc.TextOut(printerFormat[id]['leftspace'] , y, s)
+
+
+                    if t == 'prodBox':
+                        y += printerFormat[id]['topspace']
+                        for i, qty in enumerate(Qvet):
+                            if not printerFormat[id]['show_unpurchased']:
+                                if qty > 0:
+
+                                    s = ''
+                                    prodotto = self.impo.iloc[i]['prodotto']
+                                    s += printerFormat[id]['prev']
+                                    s += prodotto
+                                    s += printerFormat[id]['in0']
+                                    if printerFormat[id]['show_quantity']:
+                                        s += str(qty)
+                                    s += printerFormat[id]['in1']
+                                    if printerFormat[id]['show_price']:
+                                        prezzo = np.round(self.impo.iloc[i]['prezzo']*qty, 2)
+                                        s += str(prezzo)
+                                    s += printerFormat[id]['post']
+
+                                    y += printerFormat[id]['linespace']
+                                    dc.TextOut(printerFormat[id]['leftspace'] , y, s)
+                            else:
+                                s = ''
+                                prodotto = self.impo.iloc[i]['prodotto']
+                                s += printerFormat[id]['prev']
+                                s += prodotto
+                                s += printerFormat[id]['in0']
+                                if printerFormat[id]['show_quantity']:
+                                    s += str(qty)
+                                s += printerFormat[id]['in1']
+                                if printerFormat[id]['show_price']:
+                                    if printerFormat[id]['show_quantity']:
+                                        prezzo = np.round(self.impo.iloc[i]['prezzo'], 2)
+                                        s += str(prezzo)
+                                    else:
+                                        prezzo = np.round(self.impo.iloc[i]['prezzo']*qty, 2)
+                                        s += str(prezzo)                                            
+                                s += printerFormat[id]['post']
+
+                                y += printerFormat[id]['linespace']
+                                dc.TextOut(printerFormat[id]['leftspace'] , y, s)
+
+
+                # === FINE DOCUMENTO ===
+                dc.EndPage()
+                dc.EndDoc()
+
+            # except Exception as e:
+            #     messagebox.showerror('ERRORACCIO' , f"Stampante non disponibile o errore di stampa: {e}. "+
+            #                          '\n' + 'Seleziona No Printer  dal PRINTER_EDITOR per evitare questo errore' )
+
+
+
+
+
+            #     y = 50  # coordinata verticale iniziale
+
+            #     # === INTESTAZIONE ===
+            #     font_title = win32ui.CreateFont({"name": "Arial", "height": 50, "weight": 700})
+            #     dc.SelectObject(font_title)
+            #     dc.TextOut(0, y, "🍔 PANINOTECA REPAX 🍔")
+            #     y += 50
+
+
+            #     # linea decorativa
+            #     font_line = win32ui.CreateFont({"name": "Arial", "height": 25, "weight": 450})
+            #     dc.SelectObject(font_line)
+            #     dc.TextOut(70, y, "================================")
+            #     y += 50
+
+
+            #     # === DETTAGLI CLIENTE E PRODOTTI ===
+            #     font_body = win32ui.CreateFont({"name": "Arial", "height": 25, "weight": 450})
+            #     dc.SelectObject(font_body)
+
+            #     dc.TextOut(50, y, f"Cliente: {clientID}")
+            #     y += 35
+            #     dc.TextOut(50, y, "Prodotti:")
+            #     y += 30
+
+            #     for i, qty in enumerate(Qvet):
+            #         if qty > 0:
+            #             prodotto = self.impo.iloc[i]['prodotto']
+            #             prezzo = self.impo.iloc[i]['prezzo']*qty
+            #             riga = f"• {prodotto:<20} x{int(qty):<2} EUR {prezzo:>5.2f}"
+            #             dc.TextOut(70, y, riga)
+            #             y += 30
+
+            #     # linea separatrice prima del totale
+            #     dc.TextOut(50, y, "---------------------------------------------")
+            #     y += 30
+
+            #     # === TOTALE ===
+            #     font_total = win32ui.CreateFont({"name": "Arial", "height": 25, "weight": 450})
+            #     dc.SelectObject(font_total)
+            #     dc.TextOut(50, y, f"Totale: EUR {prezzoFattura:.2f}")
+            #     y += 50
+
+            #     # === NOTE_ ===
+            #     font_note = win32ui.CreateFont({"name": "Arial", "height": 25, "weight": 450})
+            #     dc.SelectObject(font_note)
+            #     if note.strip():
+            #         dc.TextOut(50, y, f"Note: {note}")
+            #         y += 30
+
+
+            #     font_note = win32ui.CreateFont({"name": "Arial", "height": 25, "weight": 450})
+            #     dc.SelectObject(font_note)
+
+            #     mystr = 'WOOOOOOOOO'
+
+
+            #     dc.TextOut(0, y,mystr)
+            #     y+=30
+
+
+
+            #     mystr = '''aiioo'''
+            #     str_list = mystr.split('\n')
+
+            #     # font_note = win32ui.CreateFont({"name": "Arial", "height": 10, "weight": 20})
+
+            #     # for s in str_list:
+            #     #     dc.SelectObject(font_note)
+            #     #     dc.TextOut(0, y,s)
+            #     #     y+=20
+
+
+            #     # Create font with appropriate size for thermal printer
+            #     font_note = win32ui.CreateFont({
+            #         "name": "Courier New",  # Use monospace font for ASCII art
+            #         "height": 12,           # Adjust based on your printer
+            #         "weight": 400,          # Normal weight (400), bold would be 700
+            #         #"pitchandfamily": win32con.DEFAULT_PITCH | win32con.FF_MODERN
+            #     })
+
+            #     dc.SelectObject(font_note)
+
+            #     # Get text metrics to calculate proper line spacing
+            #     text_metrics = dc.GetTextMetrics()
+            #     font_height = text_metrics['tmHeight']      # Total height of font
+            #     external_leading = text_metrics['tmExternalLeading']  # Recommended extra space
+
+            #     # Calculate dynamic gap - font height plus some extra spacing
+            #     gap = font_height + external_leading# + 2  # Add 2 pixels for extra spacing
+
+
+            #     for s in str_list:
+            #         dc.TextOut(50, y, s)
+            #         y += gap
+
+            #     y+=30
+
+
+
+            #     mystr = '''caio
+            #     mario'''
+            #     str_list = mystr.split('\n')
+
+            #     # font_note = win32ui.CreateFont({"name": "Arial", "height": 10, "weight": 20})
+
+            #     # for s in str_list:
+            #     #     dc.SelectObject(font_note)
+            #     #     dc.TextOut(0, y,s)
+            #     #     y+=20
+
+
+            #     # Create font with appropriate size for thermal printer
+            #     font_note = win32ui.CreateFont({
+            #         "name": "Courier New",  # Use monospace font for ASCII art
+            #         "height": 4,           # Adjust based on your printer
+            #         "weight": 10000,          # Normal weight (400), bold would be 700
+            #         #"pitchandfamily": win32con.DEFAULT_PITCH | win32con.FF_MODERN
+            #     })
+
+            #     dc.SelectObject(font_note)
+
+            #     # Get text metrics to calculate proper line spacing
+            #     text_metrics = dc.GetTextMetrics()
+            #     font_height = text_metrics['tmHeight']      # Total height of font
+            #     external_leading = text_metrics['tmExternalLeading']  # Recommended extra space
+
+            #     # Calculate dynamic gap - font height plus some extra spacing
+            #     gap = font_height + external_leading# + 2  # Add 2 pixels for extra spacing
+
+
+            #     for s in str_list:
+            #         dc.TextOut(10, y, s)
+            #         y += gap
+
+            #     y+=30
+
+
+
+
+            #     file_name = 'logo_cattura.png'      
+            #     PHYSICALWIDTH = 10
+            #     PHYSICALHEIGHT = 10
+            #     # printer_size = dc.GetDeviceCaps(PHYSICALWIDTH), dc.GetDeviceCaps(PHYSICALHEIGHT)
+        
+            #     # bmp = Image.open(file_name)
+            #     # # if bmp.size[0] < bmp.size[1]:
+            #     # #     bmp = bmp.rotate(90)
+
+            #     # dib = ImageWin.Dib(bmp)
+            #     # dib.draw(dc.GetHandleOutput(), (100, y, 1000,1))#printer_size[0],printer_size[1]))
+
+            #     #add_img(dc, file_name)
+
+
+
+            #     # === FINE DOCUMENTO ===
+            #     dc.EndPage()
+            #     dc.EndDoc()
+
+            # except Exception as e:
+            #     print(f"Stampante non disponibile o errore di stampa: {e}")
