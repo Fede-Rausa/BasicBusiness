@@ -36,7 +36,6 @@ class SalesManager:
         self.opts = ['TODO', 'DONE', 'STBY']
         self.cats = ['Panini', 'Contorni', 'Bibite', 'Dolci', 'Frutta', 'Drink', 'Primi', 'Secondi', 'Antipasti', 'Pizze', 'Mare', 'Fritti'] #['P', 'C', 'B']
 
-        self.importPrinterFormat()
         self.impostazioniGet()
         self.importaDati()
 
@@ -47,12 +46,14 @@ class SalesManager:
         self.setupPlot()
         self.setupOrdini()
         self.setupImpoUI()
-        self.setupPrinterEditor()
         self.setupPanelOpt()
         self.setupHelp()
         self.setupMenu()
         self.IDCLIENT()
-        #self.hideshowcassa(True)
+
+        self.setupPrinterEditor()
+        self.importPrinterFormat()
+
         self.show_frame('cassa')
         self.prezzoFattura = 0
         
@@ -1669,13 +1670,15 @@ class SalesManager:
         del self.printWBoxDict[id]
 
 
-    def aggiungiPrinterBox(self, text=None):
+    def aggiungiPrinterBox(self, id = None, mytype=None):
 
         tipi = ['textBox', 'prodBox', 'total price', 
                 'total discount', 'timestamp', 'order id', 'noteBox', 'draw_with_text_ASCII']
 
-        id = 'text' + str(self.printEditorId)
-        self.printEditorId += 1
+        if id is None:
+            id = 'text' + str(self.printEditorId)
+            self.printEditorId += 1
+        
         self.printWBoxDict[id] = {}
 
 
@@ -1691,7 +1694,12 @@ class SalesManager:
 
         tk.Label(row, text='text type:', font=("Arial", 10)).pack(side=tk.LEFT)
         boxtype = tk.StringVar()
-        boxtype.set(tipi[0])
+
+        if mytype is None:
+            boxtype.set(tipi[0])
+        else:
+            boxtype.set(mytype)
+
         drop = ctk.CTkComboBox(row , variable = boxtype , values = tipi, width = 80,
         command = lambda v = self, r=row , b = boxtype, i = id : self.printerBoxContent(r, b, i))
         drop.pack(side=tk.LEFT)
@@ -1699,8 +1707,6 @@ class SalesManager:
         subframe = tk.Frame(row)
         subframe.pack(side=tk.LEFT)
         self.printWBoxDict[id]['box'] = subframe
-
-
 
         self.printerBoxContent(row, boxtype, id)
         
@@ -1963,8 +1969,6 @@ class SalesManager:
                 printerFormat[id]['text'] = self.printWBoxDict[id]['text'].get("1.0", "end-1c")
                 printerFormat[id]['linespace'] = int(self.printWBoxDict[id]['linespace'].get())
 
-
-
             if t in  ('total discount', 'total price','order id','timestamp'):
                 printerFormat[id]['prev'] = self.printWBoxDict[id]['prev'].get()
                 printerFormat[id]['post'] = self.printWBoxDict[id]['post'].get()
@@ -1998,8 +2002,138 @@ class SalesManager:
             # Read from file and parse JSON
             with open(self.path_printer, "r") as f:
                 self.printerFormat = json.load(f)
-        # else: 
-        #     self.printerFormat = 
+            
+            self.autofill_printer()
+        else: 
+            self.printerFormat = {"text5": {"boxType": "textBox", "fontfamily": "Calibri", "fontsize": 50, "fontweight": 700, "leftspace": 50, "topspace": 30, "text": "----- PANINOTECA -------", "linespace": 30},
+                                   "text6": {"boxType": "draw_with_text_ASCII", "fontfamily": "Lucida Console", "fontsize": 9, "leftspace": 100, "topspace": 50, "text": "_______________________________  _____  ____  ___\n\\______   \\_   _____/\\______   \\/  _  \\ \\   \\/  /\n |       _/|    __)_  |     ___/  /_\\  \\ \\     / \n |    |   \\|        \\ |    |  /    |    \\/     \\ \n |____|_  /_______  / |____|  \\____|__  /___/\\  \\\n        \\/        \\/                  \\/      \\_/"}, 
+                                   "text7": {"boxType": "textBox", "fontfamily": "Arial", "fontsize": 20, "fontweight": 400, "leftspace": 50, "topspace": 30, "text": """\nto preview the editor in a pdf file, on Windows 11,\nselect the printer \"Microsoft Print to PDF\"\nand make an order. If you overwrite an existing pdf file,\nplease be sure that the file is not open\nby another application, otherwise the order will fail.\n\n\nTo make ASCII drawings you could use this websites:\nto convert text to ASCII art:\nhttps://patorjk.com/software/taag/\n\nto convert image to ASCII:\nhttps://itoa.hex.dance/\n\nsome ASCII art examples:\nhttps://www.asciiart.eu/\n\nto get bold font set font weight to 700 or higher\nto get standard font set it to 400 or lower.\nYou cannot use bold fonts on ASCII drawings, for mathematical estetic reasons.\n\n=============================\n""", "linespace": 30}, 
+                                   "text9": {"boxType": "order id", "fontfamily": "Arial", "fontsize": 20, "fontweight": 400, "leftspace": 50, "topspace": 30, "prev": "order id", "post": ""}, "text10": {"boxType": "textBox", "fontfamily": "Arial", "fontsize": 20, "fontweight": 400, "leftspace": 50, "topspace": 30, "text": "=============\nbuy list:", "linespace": 30}, "text11": {"boxType": "prodBox", "fontfamily": "Arial", "fontsize": 20, "fontweight": 400, "leftspace": 50, "topspace": 30, "show_quantity": True, "show_price": True, "show_unpurchased": False, "prev": "", "in0": "           x", "in1": "      \u20ac", "post": "", "linespace": 30}, "text12": {"boxType": "total price", "fontfamily": "Arial", "fontsize": 20, "fontweight": 400, "leftspace": 50, "topspace": 30, "prev": "tot price: \u20ac", "post": ""}, "text13": {"boxType": "total discount", "fontfamily": "Arial", "fontsize": 20, "fontweight": 400, "leftspace": 50, "topspace": 30, "prev": "tot discount: \u20ac", "post": ""}, 
+                                   "text15": {"boxType": "textBox", "fontfamily": "Arial", "fontsize": 20, "fontweight": 400, "leftspace": 50, "topspace": 30, "text": "\nOrder notes:", "linespace": 30}, "text16": {"boxType": "noteBox", "fontfamily": "Arial", "fontsize": 20, "fontweight": 400, "leftspace": 50, "topspace": 30, "prev": "", "post": "", "linespace": 30}, "text17": {"boxType": "timestamp", "fontfamily": "Arial", "fontsize": 20, "fontweight": 400, "leftspace": 50, "topspace": 30, "prev": "", "post": ""}, "text18": {"boxType": "textBox", "fontfamily": "Century Gothic", "fontsize": 40, "fontweight": 700, "leftspace": 50, "topspace": 50, "text": "\n\nTHANKS FOR YOUR MONEY BRO ;)", "linespace": 30}}
+            
+            with open(self.path_printer, "w") as f:
+                json.dump(self.printerFormat, f)
+            self.autofill_printer()
+
+
+    def autofill_printer(self):
+        printerFormat = self.printerFormat
+        ids = list(printerFormat.keys())
+        last_id = ids[len(ids)-1]
+        last_id_num = int(last_id.replace('text', ''))
+        self.printEditorId = last_id_num + 1
+
+        for id in ids:
+            t = printerFormat[id]['boxType']
+            self.aggiungiPrinterBox(id, mytype =  t)
+            
+            self.printWBoxDict[id]
+
+            if t != 'draw_with_text_ASCII':
+                self.printWBoxDict[id]['fontfamily'].set(printerFormat[id]['fontfamily']) #is a StringVar
+                #self.printWBoxDict[id]['fontsize'].set(printerFormat[id]['fontsize']) #is a spinbox, so is not possible
+                self.printWBoxDict[id]['fontsize'].delete(0,"end")
+                self.printWBoxDict[id]['fontsize'].insert(0, printerFormat[id]['fontsize'])
+                self.printWBoxDict[id]['fontweight'].delete(0,"end")
+                self.printWBoxDict[id]['fontweight'].insert(0, printerFormat[id]['fontweight'])
+                self.printWBoxDict[id]['leftspace'].delete(0,"end")
+                self.printWBoxDict[id]['leftspace'].insert(0, printerFormat[id]['leftspace'])
+                self.printWBoxDict[id]['topspace'].delete(0,"end")
+                self.printWBoxDict[id]['topspace'].insert(0, printerFormat[id]['topspace'])
+
+                # printerFormat[id]['fontfamily'] = self.printWBoxDict[id]['fontfamily'].get()
+                # printerFormat[id]['fontsize'] = int(self.printWBoxDict[id]['fontsize'].get())
+                # printerFormat[id]['fontweight'] = int(self.printWBoxDict[id]['fontweight'].get())
+                # printerFormat[id]['leftspace'] = int(self.printWBoxDict[id]['leftspace'].get())
+                # printerFormat[id]['topspace'] = int(self.printWBoxDict[id]['topspace'].get())        
+            else:
+                self.printWBoxDict[id]['fontfamily'].set(printerFormat[id]['fontfamily'])
+
+                self.printWBoxDict[id]['fontsize'].delete(0,"end")
+                self.printWBoxDict[id]['fontsize'].insert(0, printerFormat[id]['fontsize'])
+                self.printWBoxDict[id]['leftspace'].delete(0,"end")
+                self.printWBoxDict[id]['leftspace'].insert(0, printerFormat[id]['leftspace'])
+                self.printWBoxDict[id]['topspace'].delete(0,"end")
+                self.printWBoxDict[id]['topspace'].insert(0, printerFormat[id]['topspace'])
+                self.printWBoxDict[id]['text'].delete(1.0, "end")
+                self.printWBoxDict[id]['text'].insert("end", printerFormat[id]['text'])
+
+                # printerFormat[id]['fontfamily'] = self.printWBoxDict[id]['fontfamily'].get()
+                # printerFormat[id]['fontsize'] = int(self.printWBoxDict[id]['fontsize'].get())
+                # printerFormat[id]['leftspace'] = int(self.printWBoxDict[id]['leftspace'].get())
+                # printerFormat[id]['topspace'] = int(self.printWBoxDict[id]['topspace'].get())     
+                # printerFormat[id]['text'] = self.printWBoxDict[id]['text'].get("1.0", "end-1c")
+
+            if t == 'textBox':
+                self.printWBoxDict[id]['text'].delete(1.0, "end")
+                self.printWBoxDict[id]['text'].insert("end", printerFormat[id]['text'])
+                self.printWBoxDict[id]['linespace'].delete(0,"end")
+                self.printWBoxDict[id]['linespace'].insert(0, printerFormat[id]['linespace'])
+
+                # printerFormat[id]['text'] = self.printWBoxDict[id]['text'].get("1.0", "end-1c")
+                # printerFormat[id]['linespace'] = int(self.printWBoxDict[id]['linespace'].get())
+
+
+            if t in  ('total discount', 'total price','order id','timestamp'):
+                self.printWBoxDict[id]['prev'].delete(0, "end")
+                self.printWBoxDict[id]['prev'].insert("end", printerFormat[id]['prev'])
+                self.printWBoxDict[id]['post'].delete(0, "end")
+                self.printWBoxDict[id]['post'].insert("end", printerFormat[id]['post'])
+
+                # printerFormat[id]['prev'] = self.printWBoxDict[id]['prev'].get()
+                # printerFormat[id]['post'] = self.printWBoxDict[id]['post'].get()
+
+            if t == 'noteBox':
+                self.printWBoxDict[id]['prev'].delete(0, "end")
+                self.printWBoxDict[id]['prev'].insert("end", printerFormat[id]['prev'])
+                self.printWBoxDict[id]['post'].delete(0, "end")
+                self.printWBoxDict[id]['post'].insert("end", printerFormat[id]['post'])
+                self.printWBoxDict[id]['linespace'].delete(0,"end")
+                self.printWBoxDict[id]['linespace'].insert(0, printerFormat[id]['linespace'])
+
+                # printerFormat[id]['prev'] = self.printWBoxDict[id]['prev'].get()
+                # printerFormat[id]['post'] = self.printWBoxDict[id]['post'].get()                
+                # printerFormat[id]['linespace'] = int(self.printWBoxDict[id]['linespace'].get())
+
+            if t == 'prodBox':
+                self.printWBoxDict[id]['show_quantity'].set(int(printerFormat[id]['show_quantity']))
+                self.printWBoxDict[id]['show_price'].set(int(printerFormat[id]['show_price']))
+                self.printWBoxDict[id]['show_unpurchased'].set(int(printerFormat[id]['show_unpurchased']))
+
+                self.printWBoxDict[id]['prev'].delete(0, "end")
+                self.printWBoxDict[id]['prev'].insert("end", printerFormat[id]['prev'])
+                self.printWBoxDict[id]['in0'].delete(0, "end")
+                self.printWBoxDict[id]['in0'].insert("end", printerFormat[id]['in0'])
+                self.printWBoxDict[id]['in1'].delete(0, "end")
+                self.printWBoxDict[id]['in1'].insert("end", printerFormat[id]['in1'])
+                self.printWBoxDict[id]['post'].delete(0, "end")
+                self.printWBoxDict[id]['post'].insert("end", printerFormat[id]['post'])
+                self.printWBoxDict[id]['linespace'].delete(0,"end")
+                self.printWBoxDict[id]['linespace'].insert(0, printerFormat[id]['linespace'])
+
+
+                # printerFormat[id]['show_quantity'] = bool(self.printWBoxDict[id]['show_quantity'].get())
+                # printerFormat[id]['show_price'] = bool(self.printWBoxDict[id]['show_price'].get())
+                # printerFormat[id]['show_unpurchased'] = bool(self.printWBoxDict[id]['show_unpurchased'].get())
+
+                # printerFormat[id]['prev'] = self.printWBoxDict[id]['prev'].get()
+                # printerFormat[id]['in0'] = self.printWBoxDict[id]['in0'].get()
+                # printerFormat[id]['in1'] = self.printWBoxDict[id]['in1'].get()
+                # printerFormat[id]['post'] = self.printWBoxDict[id]['post'].get()
+                # printerFormat[id]['linespace'] = int(self.printWBoxDict[id]['linespace'].get())
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2333,3 +2467,4 @@ class SalesManager:
 
             # except Exception as e:
             #     print(f"Stampante non disponibile o errore di stampa: {e}")
+
