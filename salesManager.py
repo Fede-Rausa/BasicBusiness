@@ -1591,8 +1591,13 @@ class SalesManager:
         cl = self.check_list
         ids = np.array([i for i in range(len(cl)) if cl[i].get()==1])
         for i in ids:
-            i = len(self.dataset) - (i+1) #inverti l'ordine delle righe
-            self.change_status(i, status)
+            id = len(self.dataset) - (i+1) #inverti l'ordine delle righe
+            #self.change_status(i, status)
+            self.dataset.loc[id, 'status'] = status
+
+        self.aggiornaDati0()
+        self.update_sv()
+        self.update_qv()
         self.fill_scrollbar()
 
 
