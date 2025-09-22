@@ -17,6 +17,7 @@ import win32con
 from PIL import Image, ImageWin
 from tkinter import font
 from tkinter import messagebox 
+from customtk_spinbox import FloatSpinbox
 
 # import seaborn as sns
 
@@ -956,7 +957,8 @@ class SalesManager:
             'prod_table' : {'subplots': (1,1) , 'space':(0.3, 0.3), 'size': (15, 10), 'axs':None, 'canvas':None , 'fun': self.prod_table},
             'prod_time_series' : {'subplots': (1,1) , 'space':(0.3, 0.3), 'size': (15,8), 'axs':None, 'canvas':None , 'fun': self.prod_tseries},
             'category_sales' : {'subplots': (2,2) , 'space':(0.3, 0.3), 'size': (15,12), 'axs':None, 'canvas':None , 'fun': self.category_charts},
-            'day_revenue' : {'subplots': (2,2) , 'space':(0.3, 0.3), 'size': (15,12), 'axs':None, 'canvas':None , 'fun': self.day_charts}
+            'day_revenue' : {'subplots': (2,2) , 'space':(0.3, 0.3), 'size': (15,12), 'axs':None, 'canvas':None , 'fun': self.day_charts},
+            'orders_frequency_in_time' : {'subplots': (1,1) , 'space':(0.3, 0.3), 'size': (15,8), 'axs':None, 'canvas':None , 'fun': self.time_histogram}
         }
 
         #specific plot parameters
@@ -975,6 +977,33 @@ class SalesManager:
         report_dd.pack(side=tk.TOP, pady=10)
 
         self.report_labs = report_lab
+
+
+        #parameters for the histogram plot
+        #get time data
+        df = self.dataset.copy()
+        if (df['ts'][0] == '0') or (df['ts'][0] == 0):
+            df = df.drop([0])
+
+        dateSelected = ctk.StringVar(value="all_days")
+        tformat = "%Y-%m-%d %H:%M:%S.%f"
+        tformat2 = "%d/%m/%y"
+        times = list(set([datetime.strptime(t, tformat).strftime(tformat2)  for t in df['ts']]))
+
+        unique_dates = ['all_days_in_one', 'all_days'] + times
+        date_filter = ctk.CTkComboBox(self.report_frame, values = unique_dates,
+                                    command = lambda a : self.call_plot('orders_frequency_in_time') , variable = dateSelected)
+        dateSelected.set("all_days_in_one")
+        date_filter.pack(side=tk.TOP, pady=5)
+
+        bin_spinbox = FloatSpinbox(self.report_frame, text='n of bins:', default_val=24, min = 1,
+            command = lambda : self.call_plot('orders_frequency_in_time'))
+        bin_spinbox.pack(side=tk.TOP, pady=5)
+        interval_spinbox = FloatSpinbox(self.report_frame, text='minutes interval:', default_val=30, min = 1,
+            command = lambda : self.call_plot('orders_frequency_in_time'))
+        interval_spinbox.pack(side=tk.TOP, pady=5)
+
+        self.time_hist_par = dateSelected, date_filter, bin_spinbox, interval_spinbox
 
 
        # setup plots
@@ -1000,6 +1029,17 @@ class SalesManager:
             else:
                 canv.get_tk_widget().pack_forget()
 
+            if plot_id != 'orders_frequency_in_time':
+                dateSelected, date_filter, bin_spinbox, interval_spinbox = self.time_hist_par
+                date_filter.pack_forget()
+                bin_spinbox.pack_forget()
+                interval_spinbox.pack_forget()
+            else:
+                dateSelected, date_filter, bin_spinbox, interval_spinbox = self.time_hist_par
+                date_filter.pack(side=tk.TOP, pady=5)
+                bin_spinbox.pack(side=tk.TOP, pady=5)
+                interval_spinbox.pack(side=tk.TOP, pady=5)
+        
 
     def call_plot(self, plot_id):
         self.select_plot(plot_id)
@@ -1459,6 +1499,61 @@ class SalesManager:
 
 
             #canv2.draw()
+
+
+    def time_histogram(self, axs):
+
+        if (len(self.dataset) > 0):
+            #get widgets
+            dateSelected, date_filter, bin_spinbox, interval_spinbox = self.time_hist_par
+
+            #get data
+            df = self.dataset.copy()
+            if (df['ts'][0] == '0') or (df['ts'][0] == 0):
+                df = df.drop([0])
+
+
+            if dateSelected.get() == 'all_days':
+                #get dates
+                tformat = "%Y-%m-%d %H:%M:%S.%f"
+                times = [datetime.strptime(t, tformat)  for t in df['ts']]
+            else:
+                if dateSelected.get() == 'all_days_in_one':
+                    tformat = "%Y-%m-%d %H:%M:%S.%f"
+                    # arbitrary constant date
+                    day = dt.date(2000, 1, 1)
+                    times = [dt.datetime.combine(day, datetime.strptime(t, tformat).time()) for t in df['ts']]
+                    #times = [datetime.strptime(t, tformat)  for t in times]
+                else:
+                    tformat = "%Y-%m-%d %H:%M:%S.%f"
+                    tformat2 = "%d/%m/%y"
+                    times = [datetime.strptime(t, tformat)  for t in df['ts'] if (datetime.strptime(t, tformat).strftime(tformat2) == dateSelected.get())]
+                #print(times)
+
+
+            #day = dt.date(2000, 1, 1)  # arbitrary constant date
+            #times = [dt.datetime.combine(day, t.time()) for t in timestamps]
+
+
+            axs.clear()
+            # Plot histogram
+            axs.hist(times, bins = int(bin_spinbox.get()), edgecolor="black")
+
+            # Format x-axis as HH:MM
+            axs.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
+            axs.xaxis.set_major_locator(mdates.MinuteLocator(interval= int(interval_spinbox.get())))  # tick every hour
+
+            axs.set_xlabel("Time of Day")
+            axs.set_ylabel("Frequency")
+            axs.set_title("Histogram of Timestamps in One Day")
+            axs.tick_params(axis='x', rotation=45)
+
+            #axs.set_xticks(rotation=45)
+            #plt.tight_layout()
+
+
+
+
 
 
 
